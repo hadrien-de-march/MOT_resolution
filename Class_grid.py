@@ -70,6 +70,7 @@ class Grid:
     gtol_for_newton = False
     newNewton = True
     grid_MC = False
+    MC_iter = None
     precond_CG = False
     additional_step_CG = False
     sparse_is_on = False
@@ -124,7 +125,7 @@ class Grid:
     def make_grid(self, axis, dim = None, basic_inclusion = [], line = []):
         if self.grid_MC:
             print("MC grid created for "+axis)
-            return self.grid_MC_creator(axis)
+            return self.grid_MC_creator(axis, MC_iter = self.MC_iter)
         else:
             if dim is None:
                 dim = self.dim
@@ -134,19 +135,18 @@ class Grid:
             elif axis == 'y':
                 steps = self.stepsY
                 bound = self.boundY
-            if dim==0:
-                return [np.array(basic_inclusion)]
-            else:
-                grid = []
-                if line == []:
-                    line = list(map(lambda x: x*2.*bound/steps-bound, range(steps+1)))
-                for x in line:
-                    basic_inclusion_local = list(basic_inclusion)
-                    basic_inclusion_local.append(x)
-                    for u in self.make_grid(axis = axis, dim = dim-1,
-                                            basic_inclusion = basic_inclusion_local, line = line):
-                        grid.append(u)
+            # List of ranges across all dimensions
+            start = dim*[0]
+            stop = dim*[steps+1]
+            L = [np.arange(start[i] , stop[i]) for i in range(dim)]
+
+            # Finally use meshgrid to form all combinations corresponding to all 
+            # dimensions and stack them as M x ndims array
+            grid_int = np.hstack((np.meshgrid(*L))).swapaxes(0,1).reshape(dim,-1).T
+            origin = np.reshape(np.zeros(dim)+bound, (1, dim))
+            grid = grid_int*2*bound/steps-origin
             return grid
+        
         
     def copy(self):
         instance = deepcopy(self)
@@ -253,7 +253,7 @@ class Grid:
                  compute_entropy_error = False,
                  nb_threads = 2,  compute_phi_h = False, use_pool = False, smart_timing_pool = False,
                  plot_save = False, entropic = False, method = 'BFGS',
-                 tolerance = 1e-7, penalization = 1e-4, times_compute_phi_psi = 1,
+                 tolerance = 1e-7, penalization = 1e-4, times_compute_phi_psi = 1, MC_iter = None,
                  debug_mode = False, purify_proba = False, proba_min = 1e-5, grid_MC = False,
                  tasks_per_thread = 4, fignum = 1,
                  print_time_pool = False, tag = '',
@@ -311,6 +311,7 @@ class Grid:
         self.d_nu = d_nu
         self.d_nu_d_mu = d_nu_d_mu
         self.grid_MC = grid_MC
+        self.MC_iter = MC_iter
         self.grid_MC_creator = grid_MC_creator
         #Building the grids
         gridX = np.array(self.make_grid('x'))
@@ -609,83 +610,68 @@ class Grid:
 
     def doble_grid(self, axis = 'xy', sparse = False, lift = False):
         if sparse:
-            print("Sparse is still to code.")
-        if axis == 'x':
-            axis_do = ['x']
-        elif axis == 'y':
-            axis_do = ['y']
-        elif axis == 'xy':
-            axis_do = ['x', 'y']
-        else:
-            raise("Wrong axis.")
-        zero = self.zero
+            print("Sparse is still to code.")#I have no clue what this is for lol
+        axis_do = []
+        if 'x' in axis:
+            axis_do.append('x')
+        if 'y' in axis:
+            axis_do.append('y')
         dim = self.dim
-        #FILL THE NEW PHI, PSI, AND H
-        def produce_size_doble(base, level, power):
-            if level >= dim:
-                return [base]
-            else:
-                return produce_size_doble(base,
-                    level+1, power) + produce_size_doble(base+power[level],
-                                  level+1, power)
         for axis in axis_do:
             if axis == 'x':
-                powerX = np.array(list(map(lambda n: (self.stepsX+1)**(dim-1-n), range(dim))))
-                base_to_update = np.array(produce_size_doble(0., 0, powerX))
-                gridX = self.gridX
+                grid = self.gridX
+                bound = self.boundX
+                steps = self.stepsX
                 lenX = self.lenX
-                phi = self.phi
-                h = self.h
-                boundX = self.boundX
-                stepsX = self.stepsX
-                self.stepsX *= 2
-                gridX = np.array(self.make_grid('x'))
-                self.gridX = np.array(gridX)
-                self.lenX = len(self.gridX)
-                self.init_phi()
-                self.init_h()
-                for add in base_to_update:
-                    for i in range(lenX):
-                        phi_x = phi[i]
-                        if self.martingale:
-                            h_x = h[i]
-                        x = np.array(gridX[i])
-                        x += boundX
-                        x /= 2.
-                        x *= 2*stepsX/boundX
-                        x_int = int(np.sum(powerX*x)+zero)
-                        if self.debug_mode == 8:
-                            print("please compare", gridX[i], self.gridX[x_int])
-                        i_update = x_int + add#to_update = x_int + base_to_update#produce_size_doble(x_int, 0, powerX)
-                        #for i_update in np.nditer(to_update):
-                        self.phi[int(i_update)] = phi_x
-                        if self.martingale:
-                            self.h[int(i_update)] = h_x
-            if axis == 'y':
-                powerY = np.array(list(map(lambda n: (self.stepsY+1)**(dim-1-n), range(dim))))
-                base_to_update = np.array(produce_size_doble(0., 0, powerY))
-                gridY = self.gridY
+            elif axis == 'y':
+                grid = self.gridY
+                bound = self.boundY
+                steps = self.stepsY
                 lenY = self.lenY
-                psi = self.psi
-                boundY = self.boundY
-                stepsY = self.stepsY
-                self.stepsY *= 2
-                gridY = np.array(self.make_grid('y'))
-                self.gridY = np.array(gridY)
+                self.nu_original = None
+            else:
+                raise("You should not be here")
+            if self.grid_MC:
+                grid_2 = self.grid_MC_creator(axis, MC_iter = self.MC_iter)
+                grid = np.concatenate((grid, grid_2))
+                self.MC_iter[axis] *= 2
+                if axis == 'x':
+                    self.phi = np.concatenate((self.phi, self.phi*0+1./self.zero))
+                    if self.martingale:
+                            self.h= np.concatenate((self.h, self.h*0))
+                elif axis == 'y':
+                    self.psi = np.concatenate((self.psi, self.psi*0+1./self.zero))
+                else:
+                    raise("You should not be here")
+            else:
+              for i in range(dim):
+                grid_1 = np.array(grid)
+                grid_2 = np.array(grid)
+                grid_1[:, i] = (grid[:, i]+bound)*(2*steps-1.)/(2*steps)-bound
+                grid_2[:, i] = (grid[:, i]-bound)*(2*steps-1.)/(2*steps)+bound
+                grid = np.concatenate((grid_1, grid_2))
+                if axis == 'x':
+                    self.phi = np.concatenate((self.phi, self.phi))
+                    if self.martingale:
+                            self.h= np.concatenate((self.h, self.h))
+                elif axis == 'y':
+                    self.psi = np.concatenate((self.psi, self.psi))
+                else:
+                    raise("You should not be here")
+            if axis == 'x':
+                self.gridX = grid
+                self.lenX = len(self.gridX)
+                self.stepsX *= 2
+            elif axis == 'y':
+                self.gridY = grid
                 self.lenY = len(self.gridY)
-                self.init_psi()   
-                for add in base_to_update:
-                    for j in range(lenY):
-                        psi_y = psi[j]
-                        y = np.array(gridY[j])
-                        y += boundY
-                        y /= 2.
-                        y *= 2*stepsY/boundY
-                        y_int = int(np.sum(powerY*y)+zero)
-                        if self.debug_mode == 8:
-                            print("please compare", gridY[j],self.gridY[y_int])
-                        j_update = y_int + add
-                        self.psi[int(j_update)] = psi_y      
+                self.stepsY *= 2
+            else:
+                raise("You should not be here")
+                
+            
+            
+                
 
         if self.impl_psi:
             self.size_x = self.lenX*(self.dim+1)
@@ -696,6 +682,8 @@ class Grid:
         self.init_marginals()
         if self.purify_proba:
             self.purify_grid()
+        if self.martingale:
+            self.set_convex_order(tol = 1e-5)
         if lift:
             if not self.impl_phi_h:
                 self.psi_from_phi_h()
@@ -924,6 +912,8 @@ class Grid:
         
         
     def set_convex_order(self, penalization_type = "uniform", tol = zero):
+        print("\n")
+        print("Finding the closest nu in convex order...")
         grid_for_computation = self.copy()
         gfc = grid_for_computation
         gfc.cost = cst.zero_cost
@@ -937,6 +927,8 @@ class Grid:
         if self.nu_original is None:
             self.nu_original = self.nu
         self.nu = marginal_Y
+        print("Computed!")
+        print("\n")
         
         
         
@@ -2269,8 +2261,12 @@ class Grid:
                                     pen_0 = None, pen_f = None):
         def test_size():
             if final_granularity is not None:
-                stepX = 2*self.boundX/self.stepsX
-                stepY = 2*self.boundY/self.stepsY
+                if self.grid_MC:
+                    stepX = 1./self.MC_iter['x']
+                    stepY = 1./self.MC_iter['y']
+                else:
+                    stepX = 2*self.boundX/self.stepsX
+                    stepY = 2*self.boundY/self.stepsY
                 if self.impl_psi:
                     step = stepX
                 elif self.impl_phi_h:
@@ -2327,8 +2323,12 @@ class Grid:
                         self.sparse_gridXY = None
                         self.sparse_gridYX = None
                         self.sparse_in_on = False
-                        stepX = 2*self.boundX/self.stepsX
-                        stepY = 2*self.boundY/self.stepsY
+                        if self.grid_MC:
+                            stepX = 1./self.MC_iter['x']
+                            stepY = 1./self.MC_iter['y']
+                        else:
+                            stepX = 2*self.boundX/self.stepsX
+                            stepY = 2*self.boundY/self.stepsY
                         if self.impl_psi:
                             step = stepX
                         elif self.impl_phi_h:
@@ -2337,8 +2337,12 @@ class Grid:
                             step = np.sqrt(stepX*stepY)
                         while self.epsilon < step and test_size():
                             self.doble_grid(axis = 'xy', sparse = False, lift = True)
-                            stepX = 2*self.boundX/self.stepsX
-                            stepY = 2*self.boundY/self.stepsY
+                            if self.grid_MC:
+                                stepX = 1./self.MC_iter['x']
+                                stepY = 1./self.MC_iter['y']
+                            else:
+                                stepX = 2*self.boundX/self.stepsX
+                                stepY = 2*self.boundY/self.stepsY
                             if self.impl_psi:
                                 step = stepX
                             elif self.impl_phi_h:

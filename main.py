@@ -29,7 +29,7 @@ nb_threads = 8*cpu_count()
 tasks_per_thread = 200
 size_memory_max = 1e7
 
-use_pool = 1
+use_pool = 0
 smart_timing_pool = 0
 print_time_pool = False
 plot_perf = 1
@@ -55,8 +55,8 @@ impl_psi = 0
 impl_phi_h = 1
 include_phi = 1###Compute h and phi at the same time
 compute_phi_h = 1###Compute phi and h when computing the concave hull, and computes a precise duality bound
-sparse = 1
-scale = 0#If grid_MC is on, then scale should be off
+sparse = 0
+scale = 0#Avoid when in MC mode
 grid_MC = 1
 #implieds = [(True,False)]#(impl_phi_h, grid.impl_psi)
 nmax_Newton_h = 20
@@ -83,7 +83,7 @@ sigma = 0.25
 sigma_1 = 0.1*np.eye(d)
 sigma_2 = 0.8*np.eye(d)
 mu = np.ones(d)
-MC_iter = 1000
+MC_iter = {'x': 1000, 'y': 1000}
 norm = 1.
 p = 1.
 
@@ -93,7 +93,7 @@ purify_proba = True
 def cost(x,y):
     return cst.index_forward_cost(x,y)#straddle_cost(x,y)#distance_cost(x,y, p=p, norm = norm)#random_cost(x,y, omega = omega)#left_curtain_cost(x,y)#distance_cost(x,y, p=p, norm = norm)##distance_cost(x,y, p=p, norm = norm)#
 
-def grid_MC_creator(axis):
+def grid_MC_creator(axis, MC_iter = MC_iter):
     if axis == 'x':
         sigma = sigma_1
     elif axis == 'y':
@@ -101,7 +101,7 @@ def grid_MC_creator(axis):
     else:
         print("Axis ", axis, " is unknown.")
         raise("Unknown axis.")
-    return dst.lognormal_MC_grid(mean = mu, sigma = sigma, MC_iter = MC_iter)
+    return dst.lognormal_MC_grid(mean = mu, sigma = sigma, MC_iter = MC_iter[axis])
     
 
 print(tag)
@@ -118,7 +118,7 @@ for method in methods:
                entropic = entropic, nmax_Newton_h = nmax_Newton_h, tol_Newton_h = tol_Newton_h,
                penalization = penalization, method = method,
                times_compute_phi_psi = times_compute_phi_psi, debug_mode = debug_mode,
-               purify_proba = purify_proba, grid_MC = grid_MC,
+               purify_proba = purify_proba, grid_MC = grid_MC, MC_iter = MC_iter,
                d_mu = lambda x: dst.lognormal(x+1.,sigma = sigma_1),#dst.uniform(x),#####,#dst.gaussian(x, sigma = sigma_1),+
                d_nu = lambda x: dst.lognormal(x+1.,sigma = sigma_2),#None,#None,##None,# dst.gaussian(x, sigma = sigma_2),#
                d_nu_d_mu = None,#lambda x: dst.g_univ(x)+zero,
@@ -151,7 +151,7 @@ for method in methods:
     #grid.purify_grid()
 
     #grid.test_convex_order(tol = zero)
-    grid.set_convex_order(tol = 1e-7)
+    grid.set_convex_order(tol = 1e-5)
 
 
     grid.martingale = martingale
@@ -160,9 +160,9 @@ for method in methods:
     grid.init_psi()
     grid.init_h()
     grid.Optimization_entropic_decay(iterations = None, epsilon_start = 1e-0,
-                                     epsilon_final = 1e-2,
+                                     epsilon_final = 1e-3,
                                      intermediate_iter = 10000,#max number of entropic algo iterations
-                                     final_size = 1000,
+                                     final_size = 2000,
                                      final_granularity = None,#1e-3,
                                      r_0 = 0.5, r_f = 0.5,
                                      entrop_error = None,#1e-4,
