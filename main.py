@@ -29,7 +29,7 @@ nb_threads = 8*cpu_count()
 tasks_per_thread = 200
 size_memory_max = 1e7
 
-use_pool = 0
+use_pool = 1
 smart_timing_pool = 0
 print_time_pool = False
 plot_perf = 1
