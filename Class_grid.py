@@ -1048,10 +1048,8 @@ class Grid:
         else:
             minimize = scipy.optimize.minimize
             
-        if calc_phi:
-            mu = self.mu
-        else:
-            mu = None
+        mu = self.mu
+
         code_name = "h"
         axis = 'x'
         auxiliary = fn.auxiliary_h           
@@ -1089,6 +1087,76 @@ class Grid:
             Esp_Y_X = np.sum(np.reshape(Proba, (self.lenX, self.lenY,
               1))*(np.reshape(self.gridY,(1,self.lenY, self.dim))-np.reshape(self.gridX,
                   (self.lenX, 1, self.dim))), axis = 1)
+            print("max", np.max(Esp_Y_X))
+            
+            print("min", np.min(Esp_Y_X))
+            
+            print("sum", np.linalg.norm(Esp_Y_X, self.pow_distance))
+            
+        phi_h = {'phi' : self.phi , 'h' : self.h}
+        return phi_h
+    
+    
+    
+    
+    def h_index_from_phi_psi(self, index, calc_phi = False, phi = None, psi = None, h = None):  
+        if not self.martingale:
+            raise("you should not be here.")
+        if self.phi is None:
+            self.init_phi()
+        if phi is None:
+            phi = self.phi
+        if psi is None:
+            psi = self.psi
+        if self.h is None:
+            self.init_h()
+        if h is None:
+            h = self.h
+        if self.newNewton:
+            minimize = None
+        else:
+            minimize = scipy.optimize.minimize
+            
+        mu = self.mu
+
+        code_name = "h"
+        axis = 'x'
+        auxiliary = fn.auxiliary_h_index      
+        base_arg = self.base_arg(phi = False, psi = False, h = False, mu = False, nu = False)
+        
+        base_arg['phi'] = phi
+        base_arg['psi'] = psi
+        base_arg['h'] = h
+        base_arg['mu'] = mu
+        base_arg['minimize'] = minimize
+        base_arg['calc_phi'] = calc_phi
+        base_arg['index'] = index
+        
+        var = {'phi' : self.phi, 'h' : self.h, 'calc_phi' : calc_phi}
+            
+        def apply_elem(elem, var):
+                var['h'][elem['i']] = elem['hi']
+                if var['calc_phi']:
+                    var['phi'][elem['i']] = elem['phi_i']
+                return var
+
+        #DO NOT TOUCH THIS PART
+        var = fn.action_pool(auxiliary = auxiliary, apply_elem = apply_elem,
+        axis = axis, base_arg = base_arg, var = var, code_name = code_name)
+        #END OF NOT TOUCHING
+        
+        self.h = var['h']
+        if calc_phi:
+            self.phi = var['phi']
+        if self.debug_mode==4 and calc_phi:
+            Proba = self.compute_proba()
+            mu = np.sum(Proba, axis = 1)
+            gf.check(gf.approx_Equal(mu, self.mu), ("Marginal mu fail, distance =", np.linalg.norm(mu-self.mu)))
+        if self.debug_mode==3:
+            Proba = self.compute_proba()
+            Esp_Y_X = np.sum(np.reshape(Proba, (self.lenX, self.lenY,
+              1))*(np.reshape(self.gridY,(1,self.lenY, self.dim))-np.reshape(self.gridX,
+                  (self.lenX, 1, self.dim))), axis = 1)[:, index]
             print("max", np.max(Esp_Y_X))
             
             print("min", np.min(Esp_Y_X))
@@ -1501,6 +1569,8 @@ class Grid:
             mart = ''
         if self.method == 'sinkhorn':
             self.Optimization_entropic_sinkhorn(iterations = iterations)
+        elif self.method == 'bregman':
+            self.Optimization_entropic_bregman(iterations = iterations)
         elif self.method == 'hybrid':
             self.Optimization_entropic_hybrid(iterations = iterations)
         else:
@@ -1609,6 +1679,102 @@ class Grid:
         self.impl_psi = impl_psi
         self.time_init -= time_compute
         return 0
+    
+    
+    def Optimization_entropic_bregman(self, iterations = 20):
+        self.grid_just_dobled = False
+        impl_phi_h = self.impl_phi_h
+        impl_psi = self.impl_psi
+        calc_phi = 1#self.include_phi???
+        self.impl_phi_h = 0
+        self.impl_psi = 0
+        right_mu = False
+        time_compute = -self.time_init
+        self.penalization = 0
+        the_time = timeit.default_timer()
+        if impl_psi:
+            t_0 = timeit.default_timer()
+            self.psi_from_phi_h()
+            print("time for psi = ", timeit.default_timer()-t_0)
+            if self.debug_mode == 6:
+                print("psi=",self.psi)
+            right_mu = False
+        elif impl_phi_h:
+            if self.martingale:
+                for index in range(self.dim):
+                    t_0 = timeit.default_timer()
+                    self.h_index_from_phi_psi(index, calc_phi = calc_phi)
+                    print("time for h", index , " = " , timeit.default_timer()-t_0)
+                if self.debug_mode == 6:
+                    print("h = ", self.h)                
+                    print("phi=", self.phi)
+                if calc_phi:
+                    right_mu = True
+                else:
+                    right_mu = False
+            if not right_mu:
+                    t_0 = timeit.default_timer()
+                    self.phi_from_psi_h()
+                    print("time for phi = ", timeit.default_timer()-t_0)
+                    if self.debug_mode == 6:
+                        print("phi=",self.phi)
+                    right_mu = True
+        time_compute += timeit.default_timer()-the_time
+        self.times_comp.append(time_compute)
+        error = self.value_grad_ext(self.package(self.phi, self.psi, self.h))[1]
+        if np.linalg.norm(error, self.pow_distance) <= self.tolerance:
+            self.impl_phi_h = impl_phi_h
+            self.impl_psi = impl_psi
+            self.time_init -= time_compute
+            return 0
+        for i in range(iterations):
+            the_time = timeit.default_timer()
+            print('\n')
+            print("iteration ",i+1)
+            for j in range(self.times_compute_phi_psi):
+                if not right_mu:
+                    t_0 = timeit.default_timer()
+                    self.phi_from_psi_h()
+                    print("time for phi = ", timeit.default_timer()-t_0)
+                    if self.debug_mode == 6:
+                        print("phi=",self.phi)
+                    right_mu = True
+                t_0 = timeit.default_timer()
+                self.psi_from_phi_h()
+                print("time for psi = ", timeit.default_timer()-t_0)
+                if self.debug_mode == 6:
+                    print("psi=",self.psi)
+                right_mu = False
+            if self.martingale:
+                for index in range(self.dim):
+                    t_0 = timeit.default_timer()
+                    self.h_index_from_phi_psi(index, calc_phi = calc_phi)
+                    print("time for h",index ," = " ,timeit.default_timer()-t_0)
+                if self.debug_mode == 6:
+                    print("h = ",self.h)
+                    print("phi=",self.phi)
+                if calc_phi:
+                    right_mu = True
+                else:
+                    right_mu = False
+            if not right_mu:
+                    t_0 = timeit.default_timer()
+                    self.phi_from_psi_h()
+                    print("time for phi = ", timeit.default_timer()-t_0)
+                    if self.debug_mode == 6:
+                        print("phi=",self.phi)
+                    right_mu = True
+            time_compute += timeit.default_timer()-the_time
+            self.times_comp.append(time_compute)
+            if i % 1 == 0:
+                self.penalization = 0
+                error = self.value_grad_ext(self.package(self.phi, self.psi, self.h))[1]
+                if np.linalg.norm(error, self.pow_distance) <= self.tolerance:
+                    break
+        self.impl_phi_h = impl_phi_h
+        self.impl_psi = impl_psi
+        self.time_init -= time_compute
+        return 0        
                 
                 
     def Optimization_entropic_hybrid(self, iterations = 20):
@@ -1729,7 +1895,7 @@ class Grid:
         base_arg['h'] = h
         base_arg['no_impl'] = no_impl
         base_arg['hess_h_inv'] = hess_h_inv
-        base_arg['include_phi'] = self.include_phi
+        #base_arg['include_phi'] = self.include_phi
         
         diag_hess = np.zeros(self.lenY)        
             

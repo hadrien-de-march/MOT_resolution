@@ -18,7 +18,7 @@ import Distribution_Functions as dst
 
 print("number of CPUs = ", cpu_count())
 
-d = 50
+d = 3
 stepsX = 10
 stepsY = 10
 boundX = 1.
@@ -42,7 +42,7 @@ martingale = 1
 
 #methods = ['Newton-CG']#'L-BFGS-B'#'Newton-CG'#'trust-ncg'#BFGS
 #methods = ['hybrid']#'Newton-CG']#]#, , 'sinkhorn']#, 'L-BFGS-B']#['trust-ncg', 'sinkhorn']#]#, 'trust-ncg', 'BFGS']
-methods = ['sinkhorn']
+methods = ['bregman', 'sinkhorn']
 
 tolerance = 1e-7
 entropic = True
@@ -56,7 +56,7 @@ impl_phi_h = 1
 include_phi = 1###Compute h and phi at the same time
 compute_phi_h = 1###Compute phi and h when computing the concave hull, and computes a precise duality bound
 sparse = 0
-scale = 0#Avoid when in MC mode
+scale = 0
 grid_MC = 1
 #implieds = [(True,False)]#(impl_phi_h, grid.impl_psi)
 nmax_Newton_h = 20
@@ -81,7 +81,7 @@ pow_distance = 1
 omega =8.
 sigma = 0.25
 sigma_1 = 0.1*np.eye(d)
-sigma_2 = 0.8*np.eye(d)
+sigma_2 = 0.2*np.eye(d)
 mu = np.ones(d)
 MC_iter = {'x': 1000, 'y': 1000}
 norm = 1.
@@ -160,7 +160,7 @@ for method in methods:
     grid.init_psi()
     grid.init_h()
     grid.Optimization_entropic_decay(iterations = None, epsilon_start = 1e-0,
-                                     epsilon_final = 1e-3,
+                                     epsilon_final = 1e-2,
                                      intermediate_iter = 10000,#max number of entropic algo iterations
                                      final_size = 2000,
                                      final_granularity = None,#1e-3,

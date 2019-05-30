@@ -256,13 +256,13 @@ def auxiliary_h(i, arg):
                 cost_array = cost(gridX[i],gridY)
                 Y_X = gridY-np.reshape(gridX[i],(1,dim))
                 
-                if calc_phi:
+                if calc_phi:#???
                     mu_i = max(mu[i], zero/lenX)
                     if mu[i] == 0.:
                         logmu_i = -infty
                     else:
                         logmu_i = np.log(mu[i])
-                    DATA = {'phi_i' : None, 'h' : None, 'gradient' : None,
+                    DATA = {'phi_i' : None, 'hi' : None, 'gradient' : None,
                             'result_found' : False, 'result_opt' : None}
                     def phi_from_h(hi):
                         arg_Gibbs = (cost_array-psi-np.sum(np.reshape(hi,(1,dim))*Y_X,
@@ -379,6 +379,185 @@ def auxiliary_h(i, arg):
                         hi += DATA['result_opt']
                     else:
                         hi += result.x
+                if debug_mode == 5:
+                    print("grad norm wololo", np.linalg.norm(DATA['gradient']))
+                return {'hi' : hi , 'i' : i , 'time_comp' : time_comp, 'phi_i' : phi_i}
+
+
+
+def auxiliary_h_index(i, arg):
+                gridY = arg['gridY']
+                cost = arg['cost']
+                psi = arg['psi']
+                lenY = arg['lenY']
+                hi_0 = arg['h'][i]
+                epsilon = arg['epsilon']
+                gridX = arg['gridX']
+                dim = arg['dim']
+                minimize = arg['minimize']
+                nmax_Newton_h = arg['nmax_Newton_h']
+                calc_phi = arg['calc_phi']
+                mu = arg['mu']
+                infty = arg['infty']
+                zero = arg['zero']
+                lenX = arg['lenX']
+                debug_mode = arg['debug_mode']
+                newNewton = arg['newNewton']
+                pow_distance = arg['pow_distance']
+                tol_Newton_h = arg['tol_Newton_h']
+                index = arg['index']
+                pen_h = 0#1e-7???
+                
+                hi_index_0 = hi_0[index]
+                
+                
+                t_0 = timeit.default_timer()
+                cost_array = cost(gridX[i],gridY)
+                Y_X = gridY-np.reshape(gridX[i],(1,dim))
+                Y_X_index = np.reshape(Y_X[:, index], (lenY, 1))
+                
+                DATA = {'phi_i' : None, 'gradient' : None, 'hi': hi_0, 'hi_index' : None,
+                            'result_found' : False, 'result_opt' : None}
+                
+                mu_i = max(mu[i], zero/lenX)
+                if mu[i] == 0.:
+                        logmu_i = -infty
+                else:
+                        logmu_i = np.log(mu[i])
+                def phi_from_h(hi):
+                        arg_Gibbs = (cost_array-psi-np.sum(np.reshape(hi,(1,dim))*Y_X,
+                                                           axis = 1))/epsilon
+                        maximum = np.max(arg_Gibbs)
+                        arg_Gibbs -= maximum
+                        Gibbs = np.sum(np.exp(arg_Gibbs))
+                        phi_i_loc = -epsilon*(logmu_i- (np.log(Gibbs)+maximum) )
+                        return phi_i_loc
+                if not calc_phi:
+                    phi_i = phi_from_h(hi_0)
+                    DATA['phi_i'] = phi_i
+                    #arg_Gibbs = (phi_i+psi+np.sum(np.reshape(hi_0,(1,dim))*Y_X,
+                    #                                    axis = 1)-cost_array)/epsilon
+                    #maximum = np.max(arg_Gibbs)
+                    #error_target = np.exp(-maximum)
+                    #tol_Newton_h *= error_target
+                
+                #else:
+                #    arg_Gibbs_0 = (cost_array-psi-np.sum(np.reshape(hi_0,(1,dim))*Y_X,
+                #                                         axis = 1))/epsilon
+                #    arg_Gibbs_0 -= np.max(arg_Gibbs_0)
+                #    Gibbs_0 = np.exp(arg_Gibbs_0)
+                #    Z_0 = np.sum(Gibbs_0)
+                
+                def value_h(hi_index):
+                    if DATA['result_found']:
+                        return (0, 0*hi_index)
+                    DATA['hi'][index] = hi_index[0]
+                    hi = DATA['hi']
+                    DATA['hi_index'] = hi_index
+                    if calc_phi:
+                        DATA['phi_i'] = phi_from_h(hi)
+                    phi_i = DATA['phi_i']
+                    arg_Gibbs = (cost_array-psi-phi_i-np.sum(np.reshape(hi, (1, dim))*Y_X,
+                                                 axis = 1))/epsilon
+                    Gibbs = np.exp(arg_Gibbs)
+                    if debug_mode == 4 and calc_phi:
+                            gf.check(gf.approx_Equal(np.sum(Gibbs),
+                                                     mu[i]), (np.sum(Gibbs), mu[i]))
+                    if calc_phi:
+                        value = (epsilon+phi_i)*mu_i
+                    else:
+                        value = phi_i*mu_i+epsilon*np.sum(Gibbs)
+                    gradient = -np.sum(np.reshape(Gibbs,
+                                            (lenY, 1))*Y_X_index, axis = 0)
+                    DATA['gradient'] = gradient
+#                    else:
+#                        arg_Gibbs = arg_Gibbs_0 -np.sum(np.reshape(hi-hi_0, (1, dim))*Y_X, axis = 1)/epsilon
+#                        Gibbs = np.exp(arg_Gibbs)/Z_0
+#                        value = epsilon*np.sum(Gibbs)
+#                        gradient = -np.sum(np.reshape(Gibbs,
+#                                                (lenY, 1))*Y_X_index, axis = 0)
+                    if not newNewton:
+                        if np.linalg.norm(gradient, 1) <= tol_Newton_h:
+                            DATA['result_found'] = True
+                            DATA['result_opt'] = hi_index
+                            if debug_mode == 5:
+                                print("result found.")
+                    val = value/mu_i
+                    grad = gradient/mu_i
+                    val += pen_h*0.5*np.dot(hi_index, hi_index)
+                    grad += pen_h*hi_index
+                    return (val, grad)
+                def hessian_h(hi_index):
+                    DATA['hi'][index] = hi_index[0]
+                    hi = DATA['hi']
+                    phi_i = DATA['phi_i']
+                    arg_Gibbs = (cost_array-psi-phi_i-np.sum(np.reshape(hi,(1,dim))*Y_X,
+                                                axis = 1))/epsilon
+                    Gibbs = np.exp(arg_Gibbs)
+                    hess = 1/epsilon*np.sum(np.reshape(Gibbs,
+                                            (lenY,1,1))*np.reshape(Y_X_index,
+                                     (lenY,1,1))*np.reshape(Y_X_index,
+                                     (lenY,1,1)), axis = 0)
+                    if calc_phi:
+                        if gf.approx_Equal(DATA['hi_index'], hi_index, tolerance = tol_Newton_h):
+                            gradient = DATA['gradient']
+                        else:
+                            gradient = value_h(hi_index)[1]
+                        hess -= 1/epsilon*1/mu_i*np.reshape(gradient,
+                                            (1, 1))*np.reshape(gradient,(1, 1))
+#                    else:
+#                        arg_Gibbs = arg_Gibbs_0 -np.sum(np.reshape(hi-hi_0,(1,dim))*Y_X,
+#                                                        axis = 1)/epsilon
+#                        Gibbs = np.exp(arg_Gibbs)/Z_0
+#                        hessian = 1/epsilon*np.sum(np.reshape(Gibbs,
+#                                            (lenY,1,1))*np.reshape(Y_X_index,
+#                                     (lenY,1,1))*np.reshape(Y_X_index,
+#                                     (lenY,1,1)),axis = 0)
+                    hessian = hess/mu_i
+                    hessian += pen_h*np.eye(1)
+                    return hessian
+                
+                x0 = np.array([hi_index_0])
+                if debug_mode == 5:
+                    disp = True
+                else:
+                    disp = False
+                if newNewton:
+                    result = gf.Newton(value_h, hessian_h, x0 = x0, tol = tol_Newton_h,
+                                       maxiter= nmax_Newton_h, disp= disp,
+                                       pow_distance = pow_distance,
+                                       order_hess = 1./epsilon)
+                else:
+                    result = minimize(value_h, x0 = x0,
+                                        method='Newton-CG',
+                                        jac=True, hess = hessian_h,
+                                        tol=tol_Newton_h,
+                                        options={'maxiter': nmax_Newton_h,
+                                                 'xtol' : tol_Newton_h,
+                                                 'disp' : disp})
+                
+                time_comp = timeit.default_timer()-t_0
+                hi = hi_0
+                if calc_phi:
+                    if newNewton:
+                        hi[index] = result['x']
+                    elif DATA['result_found']:
+                        hi[index] = DATA['result_opt']
+                    else:
+                        hi[index] = result.x
+                    if gf.approx_Equal(hi, DATA['hi'], tolerance = zero**2):
+                        phi_i = DATA['phi_i']
+                    else:
+                        phi_i = phi_from_h(hi)
+
+                else:
+                    phi_i = None
+                    if newNewton:
+                        hi[index] += result['x']
+                    elif DATA['result_found']:
+                        hi[index] += DATA['result_opt']
+                    else:
+                        hi[index] += result.x
                 if debug_mode == 5:
                     print("grad norm wololo", np.linalg.norm(DATA['gradient']))
                 return {'hi' : hi , 'i' : i , 'time_comp' : time_comp, 'phi_i' : phi_i}
