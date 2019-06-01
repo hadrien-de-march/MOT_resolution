@@ -18,7 +18,7 @@ import Distribution_Functions as dst
 
 print("number of CPUs = ", cpu_count())
 
-d = 3
+d = 2#You need to use MC if the dimension is higher than 32
 stepsX = 10
 stepsY = 10
 boundX = 1.
@@ -30,7 +30,7 @@ tasks_per_thread = 200
 size_memory_max = 1e7
 
 use_pool = 0
-smart_timing_pool = 0
+smart_timing_pool = 1
 print_time_pool = False
 plot_perf = 1
 plot_save = 1
@@ -41,8 +41,8 @@ martingale = 1
 
 
 #methods = ['Newton-CG']#'L-BFGS-B'#'Newton-CG'#'trust-ncg'#BFGS
-#methods = ['hybrid']#'Newton-CG']#]#, , 'sinkhorn']#, 'L-BFGS-B']#['trust-ncg', 'sinkhorn']#]#, 'trust-ncg', 'BFGS']
-methods = ['bregman', 'sinkhorn']
+methods = ['hybrid']#'Newton-CG']#]#, , 'sinkhorn']#, 'L-BFGS-B']#['trust-ncg', 'sinkhorn']#]#, 'trust-ncg', 'BFGS']
+#methods = ['bregman phi implied', 'sinkhorn', 'bregman']
 
 tolerance = 1e-7
 entropic = True
@@ -53,20 +53,19 @@ additional_step_CG = 0
 precond_CG = 1
 impl_psi = 0
 impl_phi_h = 1
-include_phi = 1###Compute h and phi at the same time
+include_phi = 1###Do not consider that the martingale constraint is satisfied when computing the hessian. 1 is better from observation
 compute_phi_h = 1###Compute phi and h when computing the concave hull, and computes a precise duality bound
-sparse = 0
+sparse = 1
 scale = 0
-grid_MC = 1
+grid_MC = 1#You need to use MC if the dimension is higher than 32
 #implieds = [(True,False)]#(impl_phi_h, grid.impl_psi)
 nmax_Newton_h = 20
-tol_Newton_h = 1e-8
+tol_Newton_h = 1e-7
 penalization = zero
 penalization_type = "tempered measure/func"#"measure"#"tempered measure"##"uniform"#
 penalization_power = 2.
 
 times_compute_phi_psi = 1
-method = 'Newton-CG'#'L-BFGS-B'#'Newton-CG'#'trust-ncg'#BFGS
 
 ##debug_mode code: #0: nothing #1: hessian #2: gradient #3: martingale prop
                    #4: marginals #5: disp #6: print phi,psi,h #7: preconditioning
@@ -80,8 +79,8 @@ pow_distance = 1
 
 omega =8.
 sigma = 0.25
-sigma_1 = 0.1*np.eye(d)
-sigma_2 = 0.2*np.eye(d)
+sigma_1 = 1*np.eye(d)
+sigma_2 = 2*np.eye(d)
 mu = np.ones(d)
 MC_iter = {'x': 1000, 'y': 1000}
 norm = 1.
@@ -151,7 +150,7 @@ for method in methods:
     #grid.purify_grid()
 
     #grid.test_convex_order(tol = zero)
-    grid.set_convex_order(tol = 1e-5)
+    grid.set_convex_order(tol_min = 1e-5, tol_h = 1e-10, nmax_Newton = 10)
 
 
     grid.martingale = martingale
@@ -160,9 +159,9 @@ for method in methods:
     grid.init_psi()
     grid.init_h()
     grid.Optimization_entropic_decay(iterations = None, epsilon_start = 1e-0,
-                                     epsilon_final = 1e-2,
+                                     epsilon_final = 1e-5,
                                      intermediate_iter = 10000,#max number of entropic algo iterations
-                                     final_size = 2000,
+                                     final_size = 5000,
                                      final_granularity = None,#1e-3,
                                      r_0 = 0.5, r_f = 0.5,
                                      entrop_error = None,#1e-4,

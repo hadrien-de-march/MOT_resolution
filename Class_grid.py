@@ -135,16 +135,18 @@ class Grid:
             elif axis == 'y':
                 steps = self.stepsY
                 bound = self.boundY
-            # List of ranges across all dimensions
-            start = dim*[0]
-            stop = dim*[steps+1]
-            L = [np.arange(start[i] , stop[i]) for i in range(dim)]
-
+            if dim==1:
+                grid_int = np.array([np.arange(0 , steps+1)]).T
+            else:
+                # List of ranges across all dimensions
+                start = dim*[0]
+                stop = dim*[steps+1]
+                L = [np.arange(start[i] , stop[i]) for i in range(dim)]
             # Finally use meshgrid to form all combinations corresponding to all 
             # dimensions and stack them as M x ndims array
-            grid_int = np.hstack((np.meshgrid(*L))).swapaxes(0,1).reshape(dim,-1).T
-            origin = np.reshape(np.zeros(dim)+bound, (1, dim))
-            grid = grid_int*2*bound/steps-origin
+                grid_int = np.hstack((np.meshgrid(*L))).swapaxes(0,1).reshape(dim,-1).T
+            origin = np.reshape(np.zeros(dim)-bound, (1, dim))
+            grid = grid_int*2*bound/steps+origin
             return grid
         
         
@@ -720,7 +722,7 @@ class Grid:
                'debug_mode' : self.debug_mode, 'newNewton' : self.newNewton,
                'pow_distance' : self.pow_distance, 'proba_min' : self.proba_min,
                'penalization' : self.penalization, 'include_phi' : self.include_phi,
-               'compute_phi_h' : self.compute_phi_h}
+               'compute_phi_h' : self.compute_phi_h, 'precise_h' : False}
         if phi:
             arg['phi'] = self.phi
         if psi:
@@ -911,18 +913,22 @@ class Grid:
         
         
         
-    def set_convex_order(self, penalization_type = "uniform", tol = zero):
+    def set_convex_order(self, penalization_type = "uniform", tol_min = zero, tol_h = 1e-10,
+                         nmax_Newton = 20):
         print("\n")
         print("Finding the closest nu in convex order...")
         grid_for_computation = self.copy()
         gfc = grid_for_computation
         gfc.cost = cst.zero_cost
-        gfc.method = 'Newton-CG'
+        gfc.method = 'hybrid'#'Newton-CG'
         gfc.penalization = 1.
         gfc.epsilon = 1.
-        gfc.tolerance = tol
+        gfc.plot_perf = 0
+        gfc.tolerance = tol_min
+        gfc.tol_Newton_h = tol_h
+        gfc.nmax_Newton_h = nmax_Newton
         gfc.penalization_type = penalization_type
-        gfc.Optimization_entropic_newton()
+        gfc.Optimization_entropic()
         marginal_Y = gfc.marginal(project_on = 'y')['marginal']
         if self.nu_original is None:
             self.nu_original = self.nu
@@ -1030,7 +1036,8 @@ class Grid:
 
 
 
-    def h_from_phi_psi(self, calc_phi = False, phi = None, psi = None, h = None):  
+    def h_from_phi_psi(self, calc_phi = False, phi = None, psi = None, h = None,
+                       precise_h = False):  
         if not self.martingale:
             raise("you should not be here.")
         if self.phi is None:
@@ -1061,6 +1068,7 @@ class Grid:
         base_arg['mu'] = mu
         base_arg['minimize'] = minimize
         base_arg['calc_phi'] = calc_phi
+        base_arg['precise_h'] = precise_h
         
         var = {'phi' : self.phi, 'h' : self.h, 'calc_phi' : calc_phi}
             
@@ -1146,7 +1154,7 @@ class Grid:
         #END OF NOT TOUCHING
         
         self.h = var['h']
-        if calc_phi:
+        if True:#calc_phi:
             self.phi = var['phi']
         if self.debug_mode==4 and calc_phi:
             Proba = self.compute_proba()
@@ -1569,7 +1577,7 @@ class Grid:
             mart = ''
         if self.method == 'sinkhorn':
             self.Optimization_entropic_sinkhorn(iterations = iterations)
-        elif self.method == 'bregman':
+        elif self.method == 'bregman' or self.method == 'bregman phi implied':
             self.Optimization_entropic_bregman(iterations = iterations)
         elif self.method == 'hybrid':
             self.Optimization_entropic_hybrid(iterations = iterations)
@@ -1685,7 +1693,10 @@ class Grid:
         self.grid_just_dobled = False
         impl_phi_h = self.impl_phi_h
         impl_psi = self.impl_psi
-        calc_phi = 1#self.include_phi???
+        if self.method == 'bregman':
+            calc_phi = 0
+        elif self.method == 'bregman phi implied':
+            calc_phi = 1
         self.impl_phi_h = 0
         self.impl_psi = 0
         right_mu = False
@@ -1895,7 +1906,6 @@ class Grid:
         base_arg['h'] = h
         base_arg['no_impl'] = no_impl
         base_arg['hess_h_inv'] = hess_h_inv
-        #base_arg['include_phi'] = self.include_phi
         
         diag_hess = np.zeros(self.lenY)        
             
@@ -2000,7 +2010,7 @@ class Grid:
         return self.h
     
         
-    def value_grad_ext(self, pack, print_grad = True):
+    def value_grad_ext(self, pack, print_grad = True, precise_h = False):
         self.current_pack = pack
         unpack = self.unpack(pack)
         phi = unpack['phi']
@@ -2011,7 +2021,7 @@ class Grid:
         elif self.impl_phi_h:
             self.psi = psi
             if self.martingale:
-                DATA = self.h_from_phi_psi(calc_phi = True, psi = psi)
+                DATA = self.h_from_phi_psi(calc_phi = True, psi = psi, precise_h = precise_h)
                 phi = DATA['phi']
                 self.phi = phi
                 h = DATA['h']
@@ -2179,7 +2189,7 @@ class Grid:
         self.grid_just_dobled = False
         self.time_init += timeit.default_timer()
         
-        def value_grad(pack):
+        def value_grad(pack, precise_h = True):
             if self.result_found:
                 return (0, 0*pack)
             value_grad = self.value_grad_ext(pack)
@@ -2526,6 +2536,7 @@ class Grid:
                                        
                 
                     if self.sparse:
+                        sparse_was_on = self.sparse_is_on
                         sparsity_limit = 0.33
                         data = self.init_sparse(no_sto = True)
                         super_ratio = (data[0]+data[1])/(2.*self.lenX*self.lenY)
@@ -2540,6 +2551,12 @@ class Grid:
                         ratio_y = data[1]*1./(self.lenX*self.lenY)
                         print("non_zero_x = ", data[0]," ratio = ", ratio_x)
                         print("non_zero_y = ", data[1]," ratio = ", ratio_y)
+                        if self.sparse_is_on:
+                            if sparse_was_on:
+                                print("sparse still on")
+                            else:
+                                print("sparse on")
+                        
                 if entrop_error is not None and (test_accuracy <= entrop_error):
                     break
         print('\n')
