@@ -1037,7 +1037,8 @@ class Grid:
 
 
     def h_from_phi_psi(self, calc_phi = False, phi = None, psi = None, h = None,
-                       precise_h = False, safe_solving = False, restrict_compute = None):  
+                       precise_h = False, safe_solving = False, restrict_compute = None,
+                       previous_error = None):  
         if not self.martingale:
             raise("you should not be here.")
         if self.phi is None:
@@ -1072,6 +1073,7 @@ class Grid:
         base_arg['safe_solving'] = safe_solving
         if safe_solving:
             base_arg['restrict_compute'] = restrict_compute
+            base_arg['previous_error'] = previous_error
         
         var = {'phi' : self.phi, 'h' : self.h, 'calc_phi' : calc_phi, 'mart_errors': np.array(self.h)}
             
@@ -2014,7 +2016,7 @@ class Grid:
         return self.h
     
     
-    def fail_h_lab(self, mart_errors, h_safe = None,
+    def fail_h_lab(self, mart_errors,
                    psi = None, precise_h = False):
         errors = np.linalg.norm(mart_errors, 1, axis = 1)
         error_tol = self.epsilon
@@ -2024,17 +2026,16 @@ class Grid:
             print("Number of failed h = ", number_fail)
             print("errors for failed h = ", errors[error_list])
             print("coordinates of the errors = ", self.gridX[error_list])
-            self.h[error_list] = h_safe[error_list]
-            h_safe = np.array(self.h)
             restrict_compute = np.zeros(self.lenX)
             restrict_compute[error_list] += 1
             DATA = self.h_from_phi_psi(calc_phi = True, psi = psi, precise_h = precise_h,
-                                       safe_solving = True, restrict_compute = restrict_compute)
+                                       safe_solving = True, restrict_compute = restrict_compute,
+                                       previous_error = errors)
             phi = DATA['phi']
             self.phi = phi
             h = DATA['h']
             self.h = h#useless?
-            h = self.fail_h_lab(DATA['mart_errors'], h_safe = h_safe, psi = psi,
+            h = self.fail_h_lab(DATA['mart_errors'], psi = psi,
                                     precise_h = precise_h)
         return (self.phi, self.h)
     
@@ -2056,7 +2057,7 @@ class Grid:
                 self.phi = phi
                 h = DATA['h']
                 self.h = h#useless?
-                self.phi, self.h = self.fail_h_lab(DATA['mart_errors'], h_safe = h_sto,
+                self.phi, self.h = self.fail_h_lab(DATA['mart_errors'],
                                                    psi = psi, precise_h = precise_h)
             else:
                 phi = self.phi_from_psi_h(psi = psi, h = None)

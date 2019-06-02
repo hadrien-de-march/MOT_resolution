@@ -18,7 +18,7 @@ import Distribution_Functions as dst
 
 print("number of CPUs = ", cpu_count())
 
-d = 2#You need to use MC if the dimension is higher than 32
+d = 3#You need to use MC if the dimension is higher than 32
 stepsX = 10
 stepsY = 10
 boundX = 1.
@@ -30,7 +30,7 @@ tasks_per_thread = 200
 size_memory_max = 1e7
 
 use_pool = 0
-smart_timing_pool = 1
+smart_timing_pool = 0#pool activates when the problem becomes big
 print_time_pool = False
 plot_perf = 1
 plot_save = 1
@@ -55,7 +55,7 @@ impl_psi = 0
 impl_phi_h = 1
 include_phi = 1###Do not consider that the martingale constraint is satisfied when computing the hessian. 1 is better from observation
 compute_phi_h = 1###Compute phi and h when computing the concave hull, and computes a precise duality bound
-sparse = 1
+sparse = 0
 scale = 0
 grid_MC = 1#You need to use MC if the dimension is higher than 32
 #implieds = [(True,False)]#(impl_phi_h, grid.impl_psi)
@@ -159,9 +159,9 @@ for method in methods:
     grid.init_psi()
     grid.init_h()
     grid.Optimization_entropic_decay(iterations = None, epsilon_start = 1e-0,
-                                     epsilon_final = 1e-5,
+                                     epsilon_final = 1e-6,
                                      intermediate_iter = 10000,#max number of entropic algo iterations
-                                     final_size = 5000,
+                                     final_size = 4000,
                                      final_granularity = None,#1e-3,
                                      r_0 = 0.5, r_f = 0.5,
                                      entrop_error = None,#1e-4,

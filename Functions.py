@@ -253,7 +253,8 @@ def auxiliary_h(i, arg):
                 precise_h = arg['precise_h']
                 safe_solving = arg['safe_solving']
                 if safe_solving:
-                    hardcore_compute = arg['restrict_compute'][i]  
+                    hardcore_compute = arg['restrict_compute'][i] 
+                    previous_error = arg['previous_error'][i] 
                 else:
                     hardcore_compute = False
                 
@@ -367,14 +368,16 @@ def auxiliary_h(i, arg):
                                                  'disp' : disp})
                 elif hardcore_compute:
                     epsilon_sto = epsilon
-                    if epsilon < 1.:
-                        nb_iter = int(1+np.rint(-np.log2(epsilon)))
-                        d_eps = epsilon**(1./(nb_iter-1.))
+                    epsilon_end = epsilon
+                    epsilon_start = min(1., previous_error)
+                    if epsilon_end < epsilon_start:
+                        nb_iter = int(2+np.rint(-np.log2(epsilon_end/epsilon_start)))
+                        d_eps = (epsilon_end/epsilon_start)**(1./(nb_iter-1.))
                     else:
-                        nb_iter = 2
-                        d_eps = epsilon
+                        nb_iter = int(2+np.rint(np.log2(epsilon_end/epsilon_start)))
+                        d_eps = (epsilon_end/epsilon_start)**(1./(nb_iter-1.))
                     for step in range(nb_iter):
-                        epsilon = d_eps**step
+                        epsilon = epsilon_start*d_eps**step
                         if newNewton:
                             result = gf.Newton(value_h, hessian_h, x0 = x0, tol = tol_Newton_h,
                                        maxiter= nmax_Newton_h, disp= disp,
