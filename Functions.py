@@ -251,7 +251,11 @@ def auxiliary_h(i, arg):
                 pow_distance = arg['pow_distance']
                 tol_Newton_h = arg['tol_Newton_h']
                 precise_h = arg['precise_h']
-                
+                safe_solving = arg['safe_solving']
+                if safe_solving:
+                    hardcore_compute = arg['restrict_compute'][i]  
+                else:
+                    hardcore_compute = False
                 
                 t_0 = timeit.default_timer()
                 if precise_h:
@@ -347,20 +351,54 @@ def auxiliary_h(i, arg):
                     disp = True
                 else:
                     disp = False
-                if newNewton:
-                    result = gf.Newton(value_h, hessian_h, x0 = x0, tol = tol_Newton_h,
+                if not hardcore_compute:
+                    if newNewton:
+                        result = gf.Newton(value_h, hessian_h, x0 = x0, tol = tol_Newton_h,
                                        maxiter= nmax_Newton_h, disp= disp,
                                        pow_distance = pow_distance,
                                        order_hess = 1./epsilon)
-                else:
-                    result = minimize(value_h, x0 = x0,
+                    else:
+                        result = minimize(value_h, x0 = x0,
                                         method='Newton-CG',
                                         jac=True, hess = hessian_h,
                                         tol=tol_Newton_h,
                                         options={'maxiter': nmax_Newton_h,
                                                  'xtol' : tol_Newton_h,
                                                  'disp' : disp})
-                
+                elif hardcore_compute:
+                    epsilon_sto = epsilon
+                    if epsilon < 1.:
+                        nb_iter = int(1+np.rint(-np.log2(epsilon)))
+                        d_eps = epsilon**(1./(nb_iter-1.))
+                    else:
+                        nb_iter = 2
+                        d_eps = epsilon
+                    for step in range(nb_iter):
+                        epsilon = d_eps**step
+                        if newNewton:
+                            result = gf.Newton(value_h, hessian_h, x0 = x0, tol = tol_Newton_h,
+                                       maxiter= nmax_Newton_h, disp= disp,
+                                       pow_distance = pow_distance,
+                                       order_hess = 1./epsilon)
+                            x0 = result['x']
+                        else:
+                            result = minimize(value_h, x0 = x0,
+                                        method='Newton-CG',
+                                        jac=True, hess = hessian_h,
+                                        tol=tol_Newton_h,
+                                        options={'maxiter': nmax_Newton_h,
+                                                 'xtol' : tol_Newton_h,
+                                                 'disp' : disp})
+                        if calc_phi:
+                            if newNewton:
+                                x0 = result['x']
+                            elif DATA['result_found']:
+                                x0 = DATA['result_opt']
+                            else:
+                                x0 = result.x
+
+                    epsilon = epsilon_sto
+                    
                 time_comp = timeit.default_timer()-t_0
                 if calc_phi:
                     if newNewton:
@@ -384,7 +422,8 @@ def auxiliary_h(i, arg):
                         hi += result.x
                 if debug_mode == 5:
                     print("grad norm wololo", np.linalg.norm(DATA['gradient']))
-                return {'hi' : hi , 'i' : i , 'time_comp' : time_comp, 'phi_i' : phi_i}
+                return {'hi' : hi , 'i' : i , 'time_comp' : time_comp, 'phi_i' : phi_i,
+                        'gradient' : DATA['gradient']/mu_i}
 
 
 

@@ -62,7 +62,7 @@ grid_MC = 1#You need to use MC if the dimension is higher than 32
 nmax_Newton_h = 20
 tol_Newton_h = 1e-7
 penalization = zero
-penalization_type = "tempered measure/func"#"measure"#"tempered measure"##"uniform"#
+penalization_type = "tempered measure/func"#"tempered measure"#"measure"##"uniform"#
 penalization_power = 2.
 
 times_compute_phi_psi = 1
@@ -79,8 +79,8 @@ pow_distance = 1
 
 omega =8.
 sigma = 0.25
-sigma_1 = 1*np.eye(d)
-sigma_2 = 2*np.eye(d)
+sigma_1 = 0.5*np.eye(d)
+sigma_2 = 1.*np.eye(d)
 mu = np.ones(d)
 MC_iter = {'x': 1000, 'y': 1000}
 norm = 1.
@@ -150,7 +150,7 @@ for method in methods:
     #grid.purify_grid()
 
     #grid.test_convex_order(tol = zero)
-    grid.set_convex_order(tol_min = 1e-5, tol_h = 1e-10, nmax_Newton = 10)
+    grid.set_convex_order(tol_min = 1e-5, tol_h = 1e-10, nmax_Newton = 20)
 
 
     grid.martingale = martingale
@@ -166,7 +166,7 @@ for method in methods:
                                      r_0 = 0.5, r_f = 0.5,
                                      entrop_error = None,#1e-4,
                                      tol = 1e-4, pen = 1e-4,
-                                     pen_0 = 1e-2, pen_f = 1e-2,#to make it evolve during epsilon scaling
+                                     pen_0 = 1e-1, pen_f = 1e-1,#to make it evolve during epsilon scaling
                                      tol_0 = 1e-2, tol_f = 1e-2#to make it evolve during epsilon scaling
                                      )
 #    grid.plot_entropic_proba()

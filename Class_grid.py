@@ -1037,7 +1037,7 @@ class Grid:
 
 
     def h_from_phi_psi(self, calc_phi = False, phi = None, psi = None, h = None,
-                       precise_h = False):  
+                       precise_h = False, safe_solving = False, restrict_compute = None):  
         if not self.martingale:
             raise("you should not be here.")
         if self.phi is None:
@@ -1069,11 +1069,15 @@ class Grid:
         base_arg['minimize'] = minimize
         base_arg['calc_phi'] = calc_phi
         base_arg['precise_h'] = precise_h
+        base_arg['safe_solving'] = safe_solving
+        if safe_solving:
+            base_arg['restrict_compute'] = restrict_compute
         
-        var = {'phi' : self.phi, 'h' : self.h, 'calc_phi' : calc_phi}
+        var = {'phi' : self.phi, 'h' : self.h, 'calc_phi' : calc_phi, 'mart_errors': np.array(self.h)}
             
         def apply_elem(elem, var):
                 var['h'][elem['i']] = elem['hi']
+                var['mart_errors'][elem['i']] = elem['gradient']
                 if var['calc_phi']:
                     var['phi'][elem['i']] = elem['phi_i']
                 return var
@@ -1101,7 +1105,7 @@ class Grid:
             
             print("sum", np.linalg.norm(Esp_Y_X, self.pow_distance))
             
-        phi_h = {'phi' : self.phi , 'h' : self.h}
+        phi_h = {'phi' : self.phi , 'h' : self.h, 'mart_errors' : var['mart_errors']}
         return phi_h
     
     
@@ -2009,6 +2013,31 @@ class Grid:
             self.h = h_sto
         return self.h
     
+    
+    def fail_h_lab(self, mart_errors, h_safe = None,
+                   psi = None, precise_h = False):
+        errors = np.linalg.norm(mart_errors, 1, axis = 1)
+        error_tol = self.epsilon
+        error_list = np.where(errors > error_tol)
+        number_fail = np.size(error_list)
+        if number_fail:
+            print("Number of failed h = ", number_fail)
+            print("errors for failed h = ", errors[error_list])
+            print("coordinates of the errors = ", self.gridX[error_list])
+            self.h[error_list] = h_safe[error_list]
+            h_safe = np.array(self.h)
+            restrict_compute = np.zeros(self.lenX)
+            restrict_compute[error_list] += 1
+            DATA = self.h_from_phi_psi(calc_phi = True, psi = psi, precise_h = precise_h,
+                                       safe_solving = True, restrict_compute = restrict_compute)
+            phi = DATA['phi']
+            self.phi = phi
+            h = DATA['h']
+            self.h = h#useless?
+            h = self.fail_h_lab(DATA['mart_errors'], h_safe = h_safe, psi = psi,
+                                    precise_h = precise_h)
+        return (self.phi, self.h)
+    
         
     def value_grad_ext(self, pack, print_grad = True, precise_h = False):
         self.current_pack = pack
@@ -2021,11 +2050,14 @@ class Grid:
         elif self.impl_phi_h:
             self.psi = psi
             if self.martingale:
+                h_sto = np.array(self.h)
                 DATA = self.h_from_phi_psi(calc_phi = True, psi = psi, precise_h = precise_h)
                 phi = DATA['phi']
                 self.phi = phi
                 h = DATA['h']
-                self.h = h
+                self.h = h#useless?
+                self.phi, self.h = self.fail_h_lab(DATA['mart_errors'], h_safe = h_sto,
+                                                   psi = psi, precise_h = precise_h)
             else:
                 phi = self.phi_from_psi_h(psi = psi, h = None)
         if self.hess_pos_safe:
