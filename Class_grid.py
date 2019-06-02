@@ -2051,7 +2051,6 @@ class Grid:
         elif self.impl_phi_h:
             self.psi = psi
             if self.martingale:
-                h_sto = np.array(self.h)
                 DATA = self.h_from_phi_psi(calc_phi = True, psi = psi, precise_h = precise_h)
                 phi = DATA['phi']
                 self.phi = phi
