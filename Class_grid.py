@@ -55,6 +55,7 @@ class Grid:
     values_opt =[]
     eval_nb = 0
     times_compute_phi_psi = 0
+    max_sinkhorn_steps_hybrid = 0
     plot_save = False
     compute_phi_h = False
     entropic = False
@@ -73,6 +74,7 @@ class Grid:
     MC_iter = None
     precond_CG = False
     additional_step_CG = False
+    maxiter_CG = 0
     sparse_is_on = False
     include_phi = True
     hess_pos_safe = False
@@ -252,7 +254,7 @@ class Grid:
     def __init__(self, dim = 0, stepsX = 0, boundX = 0, stepsY = 0, boundY = 0, epsilon = 0,
                  cost = None, d_mu = None, d_nu = None, nmax_Newton_h = 200, tol_Newton_h = 1e-10,
                  d_nu_d_mu = None, zero = 1e-10, grid_MC_creator = None,
-                 compute_entropy_error = False,
+                 compute_entropy_error = False, max_sinkhorn_steps_hybrid = 100,
                  nb_threads = 2,  compute_phi_h = False, use_pool = False, smart_timing_pool = False,
                  plot_save = False, entropic = False, method = 'BFGS',
                  tolerance = 1e-7, penalization = 1e-4, times_compute_phi_psi = 1, MC_iter = None,
@@ -261,7 +263,7 @@ class Grid:
                  print_time_pool = False, tag = '',
                  impl_psi = False, plot_perf = False, impl_phi_h = False,
                  pow_distance = 2., plot_data_save = False, gtol_for_newton = False,
-                 newNewton = True, precond_CG = False, additional_step_CG = False,
+                 newNewton = True, precond_CG = False, additional_step_CG = False, maxiter_CG = 100,
                  sparse = False, size_memory_max = 1e8, include_phi = True,
                  scale = False, penalization_type = "uniform", penalization_power = 2.):
         self.dim = dim
@@ -272,6 +274,7 @@ class Grid:
         self.method = method
         self.nmax_Newton_h = nmax_Newton_h
         self.tol_Newton_h = tol_Newton_h
+        self.max_sinkhorn_steps_hybrid = max_sinkhorn_steps_hybrid
         self.impl_psi = impl_psi
         self.proba_min = proba_min
         self.times_compute_phi_psi = times_compute_phi_psi
@@ -308,6 +311,7 @@ class Grid:
         self.gtol_for_newton = gtol_for_newton
         self.newNewton = newNewton
         self.precond_CG = precond_CG
+        self.maxiter_CG = maxiter_CG
         self.additional_step_CG = additional_step_CG
         self.d_mu = d_mu
         self.d_nu = d_nu
@@ -1806,7 +1810,7 @@ class Grid:
         else:
             self.tolerance = min(0.5, max(0.5*error_size, (1.-error_size)*error_size, tol))
         self.time_init = -(timeit.default_timer()-self.time_init)
-        self.Optimization_entropic_sinkhorn(iterations = 500)
+        self.Optimization_entropic_sinkhorn(iterations = self.max_sinkhorn_steps_hybrid)
         self.tolerance = tol
         self.penalization = pen
         self.Optimization_entropic_newton(iterations = iterations)
@@ -2292,7 +2296,7 @@ class Grid:
             result = gf.Newton_CG(value_grad, x0 = x0, hessp = hessian_p,
                               tol = tolerance, disp = True, pow_distance = self.pow_distance,
                               maxiter = iterations,
-                              maxiter_CG = 100, add_step = add_step,
+                              maxiter_CG = self.maxiter_CG, add_step = add_step,
                               cond_inv = cond_inv, check_cond = check_cond,
                               save_action = self.save_h, disp_CG = disp_CG,
                               debug_mode_CG = debug_mode_CG,

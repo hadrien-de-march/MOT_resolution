@@ -51,6 +51,8 @@ newNewton = 1#Set gtol_for_newton False is this is set True
 gtol_for_newton = 1-newNewton#Set is False if newNewton = True
 additional_step_CG = 0
 precond_CG = 1
+maxiter_CG = 40
+max_sinkhorn_steps_hybrid = 80
 impl_psi = 0
 impl_phi_h = 1
 include_phi = 1###Do not consider that the martingale constraint is satisfied when computing the hessian. 1 is better from observation
@@ -116,6 +118,7 @@ for method in methods:
                plot_save = plot_save, tolerance = tolerance, compute_entropy_error = compute_entropy_error,
                entropic = entropic, nmax_Newton_h = nmax_Newton_h, tol_Newton_h = tol_Newton_h,
                penalization = penalization, method = method,
+               max_sinkhorn_steps_hybrid = max_sinkhorn_steps_hybrid,
                times_compute_phi_psi = times_compute_phi_psi, debug_mode = debug_mode,
                purify_proba = purify_proba, grid_MC = grid_MC, MC_iter = MC_iter,
                d_mu = lambda x: dst.lognormal(x+1.,sigma = sigma_1),#dst.uniform(x),#####,#dst.gaussian(x, sigma = sigma_1),+
@@ -127,7 +130,7 @@ for method in methods:
                impl_psi = impl_psi, plot_perf = plot_perf, impl_phi_h = impl_phi_h,
                pow_distance = pow_distance, plot_data_save = plot_data_save,
                gtol_for_newton = gtol_for_newton, newNewton = newNewton,
-               precond_CG = precond_CG, additional_step_CG = additional_step_CG,
+               precond_CG = precond_CG, additional_step_CG = additional_step_CG, maxiter_CG = maxiter_CG,
                sparse = sparse, size_memory_max = size_memory_max, include_phi = include_phi,
                scale = scale, penalization_type = penalization_type, penalization_power = penalization_power)
 
@@ -166,7 +169,7 @@ for method in methods:
                                      r_0 = 0.5, r_f = 0.5,
                                      entrop_error = None,#1e-4,
                                      tol = 1e-4, pen = 1e-4,
-                                     pen_0 = 1e-1, pen_f = 1e-1,#to make it evolve during epsilon scaling
+                                     pen_0 = 1e-2, pen_f = 1e-2,#to make it evolve during epsilon scaling
                                      tol_0 = 1e-2, tol_f = 1e-2#to make it evolve during epsilon scaling
                                      )
 #    grid.plot_entropic_proba()
