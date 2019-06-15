@@ -51,8 +51,8 @@ newNewton = 1#Set gtol_for_newton False is this is set True
 gtol_for_newton = 1-newNewton#Set is False if newNewton = True
 additional_step_CG = 0
 precond_CG = 1
-maxiter_CG = 40
-max_sinkhorn_steps_hybrid = 80
+maxiter_CG = 20
+max_sinkhorn_steps_hybrid = 40
 impl_psi = 0
 impl_phi_h = 1
 include_phi = 1###Do not consider that the martingale constraint is satisfied when computing the hessian. 1 is better from observation
@@ -164,7 +164,7 @@ for method in methods:
     grid.Optimization_entropic_decay(iterations = None, epsilon_start = 1e-0,
                                      epsilon_final = 1e-6,
                                      intermediate_iter = 10000,#max number of entropic algo iterations
-                                     final_size = 4000,
+                                     final_size = 4000,#In case scale is on
                                      final_granularity = None,#1e-3,
                                      r_0 = 0.5, r_f = 0.5,
                                      entrop_error = None,#1e-4,
