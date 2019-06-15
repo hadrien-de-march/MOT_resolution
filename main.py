@@ -32,10 +32,10 @@ size_memory_max = 1e7
 use_pool = 1
 smart_timing_pool = 0#pool activates when the problem becomes big
 print_time_pool = False
-plot_perf = 1
-plot_save = 1
-plot_data_save = 0
-tag = 'mac'
+plot_perf = 1#Builds the list of time computations
+plot_save = 0#Save the figures and prevent the plotting
+plot_data_save = 1#Saves the data that serves to plot the figures
+tag = 'Oxford'
 
 martingale = 1
 
