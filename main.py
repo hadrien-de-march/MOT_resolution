@@ -18,7 +18,7 @@ import Distribution_Functions as dst
 
 print("number of CPUs = ", cpu_count())
 
-d = 3#You need to use MC if the dimension is higher than 32
+d = 50#You need to use MC if the dimension is higher than 32
 stepsX = 10
 stepsY = 10
 boundX = 1.
@@ -82,7 +82,7 @@ pow_distance = 1
 omega =8.
 sigma = 0.25
 sigma_1 = 0.5*np.eye(d)
-sigma_2 = 1.*np.eye(d)
+sigma_2 = 2.*np.eye(d)
 mu = np.ones(d)
 MC_iter = {'x': 10000, 'y': 10000}
 norm = 1.
