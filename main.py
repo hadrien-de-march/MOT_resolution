@@ -29,7 +29,7 @@ nb_threads = 8*cpu_count()
 tasks_per_thread = 200
 size_memory_max = 1e7
 
-use_pool = 0
+use_pool = 1
 smart_timing_pool = 0#pool activates when the problem becomes big
 print_time_pool = False
 plot_perf = 1
@@ -58,7 +58,7 @@ impl_phi_h = 1
 include_phi = 1###Do not consider that the martingale constraint is satisfied when computing the hessian. 1 is better from observation
 compute_phi_h = 1###Compute phi and h when computing the concave hull, and computes a precise duality bound
 sparse = 0
-scale = 0
+scale = 0#Works bad for MC
 grid_MC = 1#You need to use MC if the dimension is higher than 32
 #implieds = [(True,False)]#(impl_phi_h, grid.impl_psi)
 nmax_Newton_h = 20
@@ -84,7 +84,7 @@ sigma = 0.25
 sigma_1 = 0.5*np.eye(d)
 sigma_2 = 1.*np.eye(d)
 mu = np.ones(d)
-MC_iter = {'x': 1000, 'y': 1000}
+MC_iter = {'x': 40000, 'y': 40000}
 norm = 1.
 p = 1.
 
