@@ -347,14 +347,26 @@ def CG(b, prodA = None, tol = 1e-7, x_0 = None, maxiter = 100,
     
 
     
-def Newton_CG(value_grad, x0 = 0, hessp = None, tol=1e-7, maxiter = 100, disp = False,
+def Newton_CG(value_grad, x0 = 0, hessp = None, hess = None, tol=1e-7, maxiter = 100,
+              disp = False,
               bump = 1e-9, pow_distance = 2, maxiter_CG = 100, add_step = None,
               cond_inv = None, check_cond = False, save_action = None, disp_CG = False,
               debug_mode_CG = False, print_line_search = False, order_hess = 1.,
               adjust_for_ls = None):
     if hessp is None:
-        def hessp(x, p):
-            return (value_grad(x+bump*p)[1]-value_grad(x-bump*p)[1])/(2*bump)
+        if hess is not None:
+            storage_hess = {'hess': None, 'x': None}
+            def hessp(x, p):
+                if approx_Equal(x, storage_hess['x'], tolerance=1e-20):
+                    hessian = storage_hess['hess']
+                else:
+                    hessian = hess(x)
+                    storage_hess['x'] = np.array(x)
+                    storage_hess['hess'] = hessian
+                return np.dot(hessian, p)
+        else:
+            def hessp(x, p):
+                return (value_grad(x+bump*p)[1]-value_grad(x-bump*p)[1])/(2*bump)
     x = x0
     if add_step is not None:
         x_new = add_step(x)
@@ -386,6 +398,14 @@ def Newton_CG(value_grad, x0 = 0, hessp = None, tol=1e-7, maxiter = 100, disp = 
             return hessp( x_hess, p_loc)
         if cond_inv is not None:
             cond_inv_x = cond_inv(x_hess)
+        elif hess is not None:
+            if approx_Equal(x_hess, storage_hess['x'], tolerance=1e-20):
+                hessian = storage_hess['hess']
+            else:
+                hessian = hess(x_hess)
+                storage_hess['x'] = np.array(x_hess)
+                storage_hess['hess'] = hessian
+            cond_inv_x = 1./np.diag(hessian)
         else:
             cond_inv_x = None
         p_sto = p
