@@ -369,7 +369,7 @@ def auxiliary_h(i, arg):
                 elif hardcore_compute:
                     epsilon_sto = epsilon
                     epsilon_end = epsilon
-                    epsilon_start = min(1., previous_error)
+                    epsilon_start = previous_error
                     if epsilon_end < epsilon_start:
                         nb_iter = int(2+np.rint(-np.log2(epsilon_end/epsilon_start)))
                         d_eps = (epsilon_end/epsilon_start)**(1./(nb_iter-1.))
@@ -451,7 +451,7 @@ def auxiliary_h_index(i, arg):
                 pow_distance = arg['pow_distance']
                 tol_Newton_h = arg['tol_Newton_h']
                 index = arg['index']
-                pen_h = 0#1e-7#???
+                pen_h = 1e-10#???
                 
                 hi_index_0 = hi_0[index]
                 x_i = gridX[i]
@@ -564,7 +564,7 @@ def auxiliary_h_index(i, arg):
                     result = gf.Newton(value_h, hessian_h, x0 = x0, tol = tol_Newton_h,
                                        maxiter= nmax_Newton_h, disp= disp,
                                        pow_distance = pow_distance,
-                                       order_hess = 1./epsilon)
+                                       order_hess = 1./epsilon, invertor = 0.)
                 else:
                     result = minimize(value_h, x0 = x0,
                                         method='Newton-CG',
