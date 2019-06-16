@@ -357,7 +357,8 @@ def Newton_CG(value_grad, x0 = 0, hessp = None, hess = None, tol=1e-7, maxiter =
         if hess is not None:
             storage_hess = {'hess': None, 'x': None}
             def hessp(x, p):
-                if approx_Equal(x, storage_hess['x'], tolerance=1e-20):
+                if storage_hess['x'] is not None and approx_Equal(x,
+                               storage_hess['x'], tolerance=1e-20):
                     hessian = storage_hess['hess']
                 else:
                     hessian = hess(x)
@@ -384,7 +385,7 @@ def Newton_CG(value_grad, x0 = 0, hessp = None, hess = None, tol=1e-7, maxiter =
                 'value' : value, 'grad_norm' : np.linalg.norm(gradient, pow_distance)}
             if disp:
                 print(result)
-                result['x'] = x
+            result['x'] = x
             return result
         if add_step is not None:
             x = add_step(x)
@@ -399,13 +400,14 @@ def Newton_CG(value_grad, x0 = 0, hessp = None, hess = None, tol=1e-7, maxiter =
         if cond_inv is not None:
             cond_inv_x = cond_inv(x_hess)
         elif hess is not None:
-            if approx_Equal(x_hess, storage_hess['x'], tolerance=1e-20):
+            if storage_hess['x'] is not None and approx_Equal(x_hess,
+                            storage_hess['x'], tolerance=1e-20):
                 hessian = storage_hess['hess']
             else:
                 hessian = hess(x_hess)
                 storage_hess['x'] = np.array(x_hess)
                 storage_hess['hess'] = hessian
-            cond_inv_x = 1./np.diag(hessian)
+            cond_inv_x = (lambda x: x/np.diag(hessian))
         else:
             cond_inv_x = None
         p_sto = p

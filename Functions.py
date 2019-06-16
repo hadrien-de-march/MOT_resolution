@@ -378,10 +378,19 @@ def auxiliary_h(i, arg):
                     disp = False
                 if not hardcore_compute:
                     if newNewton:
-                        result = gf.Newton(value_h, hessian_h, x0 = x0, tol = tol_Newton_h,
+                        if dim <=0:#???
+                            result = gf.Newton(value_h, hessian_h, x0 = x0, tol = tol_Newton_h,
                                        maxiter= nmax_Newton_h, disp= disp,
                                        pow_distance = pow_distance,
                                        order_hess = 1./epsilon)
+                        else:
+                            result = gf.Newton_CG(value_h, x0 = x0, hess = hessian_h,
+                                              tol = tol_Newton_h, maxiter = nmax_Newton_h,
+                                              disp = disp, pow_distance = pow_distance,
+                                              maxiter_CG = dim,
+                                              check_cond = False, disp_CG = disp,
+                                              debug_mode_CG = False, print_line_search = False,
+                                              order_hess = 1.)
                     else:
                         result = minimize(value_h, x0 = x0,
                                         method='Newton-CG',
@@ -593,17 +602,10 @@ def auxiliary_h_index(i, arg):
                 else:
                     disp = False
                 if newNewton:
-#                    result = gf.Newton(value_h, hessian_h, x0 = x0, tol = tol_Newton_h,
-#                                       maxiter= nmax_Newton_h, disp= disp,
-#                                       pow_distance = pow_distance,
-#                                       order_hess = 1./epsilon, invertor = zero*epsilon)???
-                    result = gf.Newton_CG(value_grad, x0 = x0, hess = hessian_h,
-                                          tol = tol_Newton_h, maxiter = nmax_Newton_h,
-                                          disp = disp, pow_distance = pow_distance,
-                                          maxiter_CG = self.dim,
-                                          check_cond = False, disp_CG = disp,
-                                          debug_mode_CG = False, print_line_search = False,
-                                          order_hess = 1.)
+                    result = gf.Newton(value_h, hessian_h, x0 = x0, tol = tol_Newton_h,
+                                       maxiter= nmax_Newton_h, disp= disp,
+                                       pow_distance = pow_distance,
+                                       order_hess = 1./epsilon, invertor = zero*epsilon)
                 else:
                     result = minimize(value_h, x0 = x0,
                                         method='Newton-CG',
