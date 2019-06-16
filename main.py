@@ -84,7 +84,7 @@ sigma = 0.25
 sigma_1 = 0.5*np.eye(d)
 sigma_2 = 1.*np.eye(d)
 mu = np.ones(d)
-MC_iter = {'x': 1000, 'y': 1000}
+MC_iter = {'x': 10000, 'y': 10000}
 norm = 1.
 p = 1.
 
