@@ -117,6 +117,8 @@ class Grid:
     Proba = np.array([])
     result = np.array([])
     cost = lambda x : 0.
+    min_cost = 0.
+    max_cost = 0.
     d_mu = lambda x : 0.
     d_nu = lambda x : 0.
     d_nu_d_mu = lambda x : 0.
@@ -246,7 +248,12 @@ class Grid:
         if len(proba) != len(func):
             raise("mu is not initialized or func has wrong size.")
         return np.tensordot(proba,func,axes=(0,0))
-
+    
+    def init_cost(self):
+        data = self.cost_minimax()
+        self.max_cost = data['max_cost']
+        self.min_cost = data['min_cost']
+        
     
         
 ### Initialization
@@ -290,6 +297,7 @@ class Grid:
         self.scale = scale
         self.impl_phi_h = impl_phi_h
         if self.impl_phi_h and self.impl_psi:
+            print("phi, psi, and h cannot be implied at the same time.")
             raise("phi, psi, and h cannot be implied at the same time.")
         self.nb_threads = nb_threads
         self.zero = zero
@@ -299,7 +307,6 @@ class Grid:
         self.pow_distance = pow_distance
         self.print_time_pool = print_time_pool
         self.tasks_per_thread = tasks_per_thread
-        #self.fuck_memory = fuck_memory
         self.size_memory_max = size_memory_max
         self.debug_mode = debug_mode
         self.plot_save = plot_save
@@ -313,6 +320,7 @@ class Grid:
         self.precond_CG = precond_CG
         self.maxiter_CG = maxiter_CG
         self.additional_step_CG = additional_step_CG
+        self.cost = cost
         self.d_mu = d_mu
         self.d_nu = d_nu
         self.d_nu_d_mu = d_nu_d_mu
@@ -320,8 +328,8 @@ class Grid:
         self.MC_iter = MC_iter
         self.grid_MC_creator = grid_MC_creator
         #Building the grids
-        gridX = np.array(self.make_grid('x'))
-        gridY = np.array(self.make_grid('y'))
+        gridX = self.make_grid('x')
+        gridY = self.make_grid('y')
         self.gridX = gridX
         self.gridY = gridY
         #Grids built
@@ -333,8 +341,6 @@ class Grid:
             self.size_x = self.lenY
         else:
             self.size_x = self.lenX*(self.dim+1)+self.lenY
-        if cost!=None:
-            self.cost = cost
         self.init_marginals()
         if self.purify_proba:
             self.purify_grid()
@@ -342,6 +348,7 @@ class Grid:
             self.init_phi()
             self.init_h()
         self.init_psi()
+        self.init_cost()
         
         
     def penalization_func(self, pack, diff = 0):
@@ -674,11 +681,8 @@ class Grid:
                 self.stepsY *= 2
             else:
                 raise("You should not be here")
+        self.init_cost()
                 
-            
-            
-                
-
         if self.impl_psi:
             self.size_x = self.lenX*(self.dim+1)
         elif self.impl_phi_h:
@@ -715,7 +719,8 @@ class Grid:
                  mu = True, nu = True, gridX = True, gridY = True,
                  sparse_gridXY = True, sparse_gridYX = True):
         arg = {'lenX' : self.lenX, 'lenY' : self.lenY,
-               'cost' : self.cost, 'martingale' : self.martingale,
+               'cost' : self.cost, 'min_cost' : self.min_cost, 'max_cost' : self.max_cost,
+               'martingale' : self.martingale,
                'epsilon' : self.epsilon, 'dim' : self.dim,
                'zero' : self.zero, 'tasks_per_thread' : self.tasks_per_thread,
                'nb_threads' : self.nb_threads, 'use_pool' : self.use_pool,
@@ -753,8 +758,6 @@ class Grid:
             arg['sparsify'] = fn.sparsify
         return arg
             
-       
-       
 
     def Value_func_grad(self, psi = None, h = None, to_print = None,
                         compare_grad_diff = False, psi_rand = None,
@@ -921,10 +924,37 @@ class Grid:
                          nmax_Newton = 20):
         print("\n")
         print("Finding the closest nu in convex order...")
+        if self.nu_original is None:
+            self.nu_original = self.nu
+        max_gridX = np.resize(np.amax(self.gridX, axis = 0), (1, self.dim))
+        min_gridX = np.resize(np.amin(self.gridX, axis = 0), (1, self.dim))
+        additional_points = np.zeros(self.dim*(self.dim+1))
+        additional_points = np.resize(additional_points, (self.dim+1, self.dim))
+        for i in range(self.dim):
+            additional_points[i+1, i] = self.dim
+        rescale_center = np.resize(np.ones(self.dim)*self.dim/2., (1, self.dim))
+        additional_points = 1.01*(additional_points-rescale_center)+rescale_center
+        additional_points = min_gridX+additional_points*(max_gridX - min_gridX)
+        extension_psi = np.zeros(len(additional_points))
+        extension_nu = np.zeros(len(additional_points))+self.zero
+        
+        self.gridY = np.concatenate((self.gridY, additional_points))
+        
+        self.psi = np.concatenate((self.psi, extension_psi))
+        self.nu = np.concatenate((self.nu, extension_nu))
+
+        self.lenY = len(self.gridY)
+        if self.impl_psi:
+            self.size_x = self.lenX*(self.dim+1)
+        elif self.impl_phi_h:
+            self.size_x = self.lenY
+        else:
+            self.size_x = self.lenX*(self.dim+1)+self.lenY
+        
         grid_for_computation = self.copy()
         gfc = grid_for_computation
         gfc.cost = cst.zero_cost
-        gfc.method = 'hybrid'#'Newton-CG'
+        gfc.method = 'Newton-CG'#'hybrid'
         gfc.penalization = 1.
         gfc.epsilon = 1.
         gfc.plot_perf = 0
@@ -934,8 +964,6 @@ class Grid:
         gfc.penalization_type = penalization_type
         gfc.Optimization_entropic()
         marginal_Y = gfc.marginal(project_on = 'y')['marginal']
-        if self.nu_original is None:
-            self.nu_original = self.nu
         self.nu = marginal_Y
         print("Computed!")
         print("\n")
@@ -944,6 +972,7 @@ class Grid:
         
     def regularize_measures(self):
         if self.purify_proba:
+            print("disable purification first.")
             raise("disable purification first.")
         mu = self.mu
         nu = self.nu
@@ -1221,6 +1250,30 @@ class Grid:
         #END OF NOT TOUCHING
         
         return {'marginal' : var['marginal']}
+
+ 
+    
+    def cost_minimax(self):
+        code_name = "cost_minimax"
+        axis = 'x'
+        auxiliary = fn.auxiliary_cost_minimax
+        base_arg = self.base_arg(phi = False, psi = False, h = False,
+                                 mu = False, nu = False)
+     
+        var = {'min_cost' : np.infty, 'max_cost' : -np.infty}
+                
+        def apply_elem(elem, var):
+            var['min_cost'] = min(elem['min_cost'], var['min_cost'])
+            var['max_cost'] = max(elem['max_cost'], var['max_cost'])
+            return var
+
+        #DO NOT TOUCH THIS PART
+        var = fn.action_pool(auxiliary = auxiliary, apply_elem = apply_elem,
+        axis = axis, base_arg = base_arg, var = var, code_name = code_name)
+        #END OF NOT TOUCHING
+        
+        return {'max_cost' : var['max_cost'],
+                'min_cost' : var['min_cost']}
 
 
 

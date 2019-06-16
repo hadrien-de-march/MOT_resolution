@@ -165,7 +165,15 @@ def Gradient_stochastique(psi_0, grid, cost,
 
 def auxiliary_phi(i, arg):
                 gridY = arg['gridY']
-                cost = arg['cost']
+                cost_raw = arg['cost']
+                min_cost = arg['min_cost']
+                max_cost = arg['max_cost']
+                def cost(x, y):
+                    cost_computed = cost_raw(x, y)
+                    if min_cost == max_cost:
+                        return 0.*cost_computed
+                    else:
+                        return (cost_computed+min_cost)/(max_cost-min_cost)
                 psi = arg['psi']
                 h = arg['h']
                 epsilon = arg['epsilon']
@@ -199,7 +207,15 @@ def auxiliary_phi(i, arg):
 
 def auxiliary_psi(j, arg):
                 gridY = arg['gridY']
-                cost = arg['cost']
+                cost_raw = arg['cost']
+                min_cost = arg['min_cost']
+                max_cost = arg['max_cost']
+                def cost(x, y):
+                    cost_computed = cost_raw(x, y)
+                    if min_cost == max_cost:
+                        return 0.*cost_computed
+                    else:
+                        return (cost_computed+min_cost)/(max_cost-min_cost)
                 phi = arg['phi']
                 h = arg['h']
                 epsilon = arg['epsilon']
@@ -232,7 +248,15 @@ def auxiliary_psi(j, arg):
 
 def auxiliary_h(i, arg):
                 gridY = arg['gridY']
-                cost = arg['cost']
+                cost_raw = arg['cost']
+                min_cost = arg['min_cost']
+                max_cost = arg['max_cost']
+                def cost(x, y):
+                    cost_computed = cost_raw(x, y)
+                    if min_cost == max_cost:
+                        return 0.*cost_computed
+                    else:
+                        return (cost_computed+min_cost)/(max_cost-min_cost)
                 psi = arg['psi']
                 lenY = arg['lenY']
                 hi_0 = arg['h'][i]
@@ -432,7 +456,15 @@ def auxiliary_h(i, arg):
 
 def auxiliary_h_index(i, arg):
                 gridY = arg['gridY']
-                cost = arg['cost']
+                cost_raw = arg['cost']
+                min_cost = arg['min_cost']
+                max_cost = arg['max_cost']
+                def cost(x, y):
+                    cost_computed = cost_raw(x, y)
+                    if min_cost == max_cost:
+                        return 0.*cost_computed
+                    else:
+                        return (cost_computed+min_cost)/(max_cost-min_cost)
                 psi = arg['psi']
                 lenY = arg['lenY']
                 hi_0 = arg['h'][i]
@@ -457,7 +489,7 @@ def auxiliary_h_index(i, arg):
                 x_i = gridX[i]
                 
                 t_0 = timeit.default_timer()
-                cost_array = cost(x_i,gridY)
+                cost_array = cost(x_i, gridY)
                 DATA = {'phi_i' : None, 'gradient' : None, 'hi': hi_0, 'hi_index' : None,
                             'result_found' : False, 'result_opt' : None}
                 mu_i = max(mu[i], zero/lenX)
@@ -601,11 +633,31 @@ def auxiliary_h_index(i, arg):
                 return {'hi' : hi , 'i' : i , 'time_comp' : time_comp, 'phi_i' : phi_i}
 
 
+def auxiliary_cost_minimax(i, arg):
+                gridY = arg['gridY']
+                cost = arg['cost']
+                gridX = arg['gridX']
+                
+                t_0 = timeit.default_timer()
+                cost_array = cost(gridX[i],gridY)
+                min_cost = np.amin(cost_array)
+                max_cost = np.amax(cost_array)
+                time_comp = timeit.default_timer()-t_0
+                return {'i' : i , 'time_comp' : time_comp, 'min_cost' : min_cost,
+                        'max_cost': max_cost}
 
             
 def auxiliary_vg_phi(i, arg):
                 gridY = arg['gridY']
-                cost = arg['cost']
+                cost_raw = arg['cost']
+                min_cost = arg['min_cost']
+                max_cost = arg['max_cost']
+                def cost(x, y):
+                    cost_computed = cost_raw(x, y)
+                    if min_cost == max_cost:
+                        return 0.*cost_computed
+                    else:
+                        return (cost_computed+min_cost)/(max_cost-min_cost)
                 phi = arg['phi']
                 psi = arg['psi']
                 h = arg['h']
@@ -635,7 +687,15 @@ def auxiliary_vg_phi(i, arg):
 
 def auxiliary_vg_psi(j, arg):
                 gridY = arg['gridY']
-                cost = arg['cost']
+                cost_raw = arg['cost']
+                min_cost = arg['min_cost']
+                max_cost = arg['max_cost']
+                def cost(x, y):
+                    cost_computed = cost_raw(x, y)
+                    if min_cost == max_cost:
+                        return 0.*cost_computed
+                    else:
+                        return (cost_computed+min_cost)/(max_cost-min_cost)
                 phi = arg['phi']
                 psi = arg['psi']
                 h = arg['h']
@@ -661,7 +721,15 @@ def auxiliary_vg_psi(j, arg):
 
 def auxiliary_vg_h(i, arg):
                 gridY = arg['gridY']
-                cost = arg['cost']
+                cost_raw = arg['cost']
+                min_cost = arg['min_cost']
+                max_cost = arg['max_cost']
+                def cost(x, y):
+                    cost_computed = cost_raw(x, y)
+                    if min_cost == max_cost:
+                        return 0.*cost_computed
+                    else:
+                        return (cost_computed+min_cost)/(max_cost-min_cost)
                 phi = arg['phi']
                 psi = arg['psi']
                 h = arg['h']
@@ -695,7 +763,15 @@ def auxiliary_vg_h(i, arg):
                
 def auxiliary_hess_phi(i, arg):
                 gridY = arg['gridY']
-                cost = arg['cost']
+                cost_raw = arg['cost']
+                min_cost = arg['min_cost']
+                max_cost = arg['max_cost']
+                def cost(x, y):
+                    cost_computed = cost_raw(x, y)
+                    if min_cost == max_cost:
+                        return 0.*cost_computed
+                    else:
+                        return (cost_computed+min_cost)/(max_cost-min_cost)
                 phi = arg['phi']
                 psi = arg['psi']
                 h = arg['h']
@@ -732,7 +808,15 @@ def auxiliary_hess_phi(i, arg):
 
 def auxiliary_hess_psi(j, arg):
                 gridY = arg['gridY']
-                cost = arg['cost']
+                cost_raw = arg['cost']
+                min_cost = arg['min_cost']
+                max_cost = arg['max_cost']
+                def cost(x, y):
+                    cost_computed = cost_raw(x, y)
+                    if min_cost == max_cost:
+                        return 0.*cost_computed
+                    else:
+                        return (cost_computed+min_cost)/(max_cost-min_cost)
                 phi = arg['phi']
                 psi = arg['psi']
                 h = arg['h']
@@ -770,7 +854,15 @@ def auxiliary_hess_psi(j, arg):
 
 def auxiliary_hess_h(i, arg):
                 gridY = arg['gridY']
-                cost = arg['cost']
+                cost_raw = arg['cost']
+                min_cost = arg['min_cost']
+                max_cost = arg['max_cost']
+                def cost(x, y):
+                    cost_computed = cost_raw(x, y)
+                    if min_cost == max_cost:
+                        return 0.*cost_computed
+                    else:
+                        return (cost_computed+min_cost)/(max_cost-min_cost)
                 phi = arg['phi']
                 psi = arg['psi']
                 h = arg['h']
@@ -806,7 +898,15 @@ def auxiliary_hess_h(i, arg):
 def auxiliary_hess_h_inv(i, arg):
                 gridX = arg['gridX']
                 gridY = arg['gridY']
-                cost = arg['cost']
+                cost_raw = arg['cost']
+                min_cost = arg['min_cost']
+                max_cost = arg['max_cost']
+                def cost(x, y):
+                    cost_computed = cost_raw(x, y)
+                    if min_cost == max_cost:
+                        return 0.*cost_computed
+                    else:
+                        return (cost_computed+min_cost)/(max_cost-min_cost)
                 phi = arg['phi']
                 psi = arg['psi']
                 h = arg['h']
@@ -853,7 +953,15 @@ def auxiliary_hess_h_inv(i, arg):
 
 def auxiliary_diag_hess_psi(j, arg):
                 gridY = arg['gridY']
-                cost = arg['cost']
+                cost_raw = arg['cost']
+                min_cost = arg['min_cost']
+                max_cost = arg['max_cost']
+                def cost(x, y):
+                    cost_computed = cost_raw(x, y)
+                    if min_cost == max_cost:
+                        return 0.*cost_computed
+                    else:
+                        return (cost_computed+min_cost)/(max_cost-min_cost)
                 phi = arg['phi']
                 psi = arg['psi']
                 h = arg['h']
@@ -905,7 +1013,15 @@ def auxiliary_diag_hess_psi(j, arg):
                 
 def auxiliary_diag_hess_phi_h(i, arg):
                 gridY = arg['gridY']
-                cost = arg['cost']
+                cost_raw = arg['cost']
+                min_cost = arg['min_cost']
+                max_cost = arg['max_cost']
+                def cost(x, y):
+                    cost_computed = cost_raw(x, y)
+                    if min_cost == max_cost:
+                        return 0.*cost_computed
+                    else:
+                        return (cost_computed+min_cost)/(max_cost-min_cost)
                 phi = arg['phi']
                 psi = arg['psi']
                 h = arg['h']
@@ -949,7 +1065,15 @@ def auxiliary_diag_hess_phi_h(i, arg):
 
 def auxiliary_expectation_cost(i, arg):
                 gridY = arg['gridY']
-                cost = arg['cost']
+                cost_raw = arg['cost']
+                min_cost = arg['min_cost']
+                max_cost = arg['max_cost']
+                def cost(x, y):
+                    cost_computed = cost_raw(x, y)
+                    if min_cost == max_cost:
+                        return 0.*cost_computed
+                    else:
+                        return (cost_computed+min_cost)/(max_cost-min_cost)
                 phi = arg['phi']
                 psi = arg['psi']
                 h = arg['h']
@@ -1010,7 +1134,15 @@ def sparsify(vector, structure_matrix, index, dim = None, length = None):
 
 def auxiliary_sparse_grid(i, arg):
                 gridY = arg['gridY']
-                cost = arg['cost']
+                cost_raw = arg['cost']
+                min_cost = arg['min_cost']
+                max_cost = arg['max_cost']
+                def cost(x, y):
+                    cost_computed = cost_raw(x, y)
+                    if min_cost == max_cost:
+                        return 0.*cost_computed
+                    else:
+                        return (cost_computed+min_cost)/(max_cost-min_cost)
                 phi = arg['phi']
                 psi = arg['psi']
                 mu = arg['mu']
@@ -1062,7 +1194,15 @@ def auxiliary_sparse_grid(i, arg):
 def auxiliary_Tan(i, arg):
             gridX = arg[ 'gridX']
             gridY = arg[ 'gridY']
-            cost= arg['cost']
+            cost_raw = arg['cost']
+            min_cost = arg['min_cost']
+            max_cost = arg['max_cost']
+            def cost(x, y):
+                cost_computed = cost_raw(x, y)
+                if min_cost == max_cost:
+                    return 0.*cost_computed
+                else:
+                    return (cost_computed+min_cost)/(max_cost-min_cost)
             psi= arg['psi']
             calc_Gamma= arg['calc_Gamma']
             zero= arg['zero']
