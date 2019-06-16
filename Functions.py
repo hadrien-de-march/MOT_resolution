@@ -378,12 +378,12 @@ def auxiliary_h(i, arg):
                     disp = False
                 if not hardcore_compute:
                     if newNewton:
-                        if dim <=0:#???
+                        if dim <=200:#???
                             result = gf.Newton(value_h, hessian_h, x0 = x0, tol = tol_Newton_h,
                                        maxiter= nmax_Newton_h, disp= disp,
                                        pow_distance = pow_distance,
                                        order_hess = 1./epsilon)
-                        else:
+                        else: #If you want to try something else. It seems having the same speed
                             result = gf.Newton_CG(value_h, x0 = x0, hess = hessian_h,
                                               tol = tol_Newton_h, maxiter = nmax_Newton_h,
                                               disp = disp, pow_distance = pow_distance,
