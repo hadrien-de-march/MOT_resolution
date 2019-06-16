@@ -18,7 +18,7 @@ import Distribution_Functions as dst
 
 print("number of CPUs = ", cpu_count())
 
-d = 3#You need to use MC if the dimension is higher than 32
+d = 50#You need to use MC if the dimension is higher than 32
 stepsX = 10
 stepsY = 10
 boundX = 1.
