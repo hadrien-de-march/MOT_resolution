@@ -179,7 +179,7 @@ for method in methods:
 
 
 
-#dt.plotter_entropy_error(grid.epsilon_vs_error, d=d)
+#dt.plotter_entropy_error(grid.epsilon_vs_error, dim=d)
 
 
 

@@ -53,7 +53,7 @@ def dim2_extractor(points = 20, search = 'hybrid'):
             plt.close()
             fignum +=1
             
-def plotter_entropy_error(epsilon_vs_error, d=1):
+def plotter_entropy_error(epsilon_vs_error, dim=1):
     plt.figure(43)
     coord_eps = []
     coord_err_prec = []
@@ -63,7 +63,7 @@ def plotter_entropy_error(epsilon_vs_error, d=1):
         coord_eps.append(elem['epsilon'])
         coord_err_prec.append(elem['error_prec']/elem['epsilon'])
         coord_error.append(elem['error']/elem['epsilon'])
-        d_div2.append(d*0.5)
+        d_div2.append(dim*0.5)
     plt.semilogx(coord_eps, coord_err_prec, label = "concave hull error/epsilon")
     plt.semilogx(coord_eps, coord_error, label = "supremum error/epsilon")
     plt.semilogx(coord_eps, d_div2, label = "d/2")

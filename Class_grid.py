@@ -1856,7 +1856,8 @@ class Grid:
         pen = self.penalization
         self.time_init = timeit.default_timer()
         self.penalization = 0.
-        error = self.value_grad_ext(self.package(self.phi, self.psi, self.h))[1]
+        error = self.value_grad_ext(self.package(self.phi,
+                                                 self.psi, self.h))[1]#How to avoid this useless step???
         error_size = np.linalg.norm(error, self.pow_distance)
         if self.grid_just_dobled:
             self.tolerance = min(0.5, max(0.5*error_size, tol))
@@ -2580,7 +2581,8 @@ class Grid:
                     self.Optimization_entropic(iterations = intermediate_iter)
                     self.fignum += 1
                 self.penalization = 0.
-                error = self.value_grad_ext(self.package(self.phi, self.psi, self.h), print_grad = False)[1]
+                error = self.value_grad_ext(self.package(self.phi, self.psi,
+                                            self.h), print_grad = False)[1]#Is this step useful???
                 print("error_real = ", np.linalg.norm(error,self.pow_distance))
                 if self.epsilon<=1e-0:
                     test_accuracy = self.test_accuracy()
