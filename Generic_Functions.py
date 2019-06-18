@@ -488,7 +488,16 @@ def Newton(value_grad, hess, x0 = 0, tol=1e-7, maxiter = 100, disp = False,
             data = value_grad(x)
             value = data[0]
             gradient = data[1]
-        p = np.linalg.solve(hess(x)+invertor*np.eye(dim),gradient)
+        try:
+            p = np.linalg.solve(hess(x),gradient)
+        except:
+            try:
+                p = np.linalg.solve(hess(x)+invertor*np.eye(dim),gradient)
+            except:
+                try:
+                    p = np.linalg.solve(hess(x)+2.*invertor*np.eye(dim),gradient)
+                except:
+                    p = gradient
         if save_action is not None:
             sto = save_action()
         else:

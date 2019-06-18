@@ -382,14 +382,6 @@ def auxiliary_h(i, arg):
                                        maxiter= nmax_Newton_h, disp= disp,
                                        pow_distance = pow_distance,
                                        order_hess = 1./epsilon)
-#                        #If you want to try something else. It seems having the same speed
-#                        result = gf.Newton_CG(value_h, x0 = x0, hess = hessian_h,
-#                                              tol = tol_Newton_h, maxiter = nmax_Newton_h,
-#                                              disp = disp, pow_distance = pow_distance,
-#                                              maxiter_CG = dim,
-#                                              check_cond = False, disp_CG = disp,
-#                                              debug_mode_CG = False, print_line_search = False,
-#                                              order_hess = 1.)
                     else:
                         result = minimize(value_h, x0 = x0,
                                         method='Newton-CG',
