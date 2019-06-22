@@ -279,6 +279,7 @@ def auxiliary_h(i, arg):
                 if safe_solving:
                     hardcore_compute = arg['restrict_compute'][i] 
                     previous_error = arg['previous_error'][i] 
+                    iter_fail = arg['iter_fail']
                 else:
                     hardcore_compute = False
                 
@@ -393,10 +394,10 @@ def auxiliary_h(i, arg):
                 elif hardcore_compute:
                     epsilon_sto = epsilon
                     epsilon_end = epsilon
-                    norm_psi = np.linalg.norm(psi, 'inf')
+                    norm_psi = np.linalg.norm(psi, np.inf)
                     size_Delta = norm_psi+1.
-                    epsilon_start = min(size_Delta/10., previous_error)
-                    if epsilon_start < previous_error:
+                    epsilon_start = min(size_Delta/10., previous_error)*2**iter_fail
+                    if epsilon_start < previous_error*2**iter_fail:
                         norm_x0 = np.linalg.norm(x0, 1)*dim
                         x0 /= max(norm_x0/(10.*size_Delta), 1.)
                     if epsilon_end < epsilon_start:

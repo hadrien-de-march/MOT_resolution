@@ -1071,7 +1071,7 @@ class Grid:
 
     def h_from_phi_psi(self, calc_phi = False, phi = None, psi = None, h = None,
                        precise_h = False, safe_solving = False, restrict_compute = None,
-                       previous_error = None):  
+                       previous_error = None, iter_fail = None):  
         if not self.martingale:
             raise("you should not be here.")
         if self.phi is None:
@@ -1107,6 +1107,7 @@ class Grid:
         if safe_solving:
             base_arg['restrict_compute'] = restrict_compute
             base_arg['previous_error'] = previous_error
+            base_arg['iter_fail'] = iter_fail
         
         var = {'phi' : self.phi, 'h' : self.h, 'calc_phi' : calc_phi, 'mart_errors': np.array(self.h)}
             
@@ -1706,8 +1707,8 @@ class Grid:
                     right_mu = True
         time_compute += timeit.default_timer()-the_time
         self.times_comp.append(time_compute)
-        error = self.value_grad_ext(self.package(self.phi, self.psi, self.h))[1]
-        if np.linalg.norm(error, self.pow_distance) <= self.tolerance:
+        error = self.marginal_error()
+        if error <= self.tolerance:
             self.impl_phi_h = impl_phi_h
             self.impl_psi = impl_psi
             self.time_init -= time_compute
@@ -1743,8 +1744,8 @@ class Grid:
             self.times_comp.append(time_compute)
             if i % 1 == 0:
                 self.penalization = 0
-                error = self.value_grad_ext(self.package(self.phi, self.psi, self.h))[1]
-                if np.linalg.norm(error, self.pow_distance) <= self.tolerance:
+                error = self.marginal_error()
+                if error <= self.tolerance:
                     break
         self.impl_phi_h = impl_phi_h
         self.impl_psi = impl_psi
@@ -1795,8 +1796,8 @@ class Grid:
                     right_mu = True
         time_compute += timeit.default_timer()-the_time
         self.times_comp.append(time_compute)
-        error = self.value_grad_ext(self.package(self.phi, self.psi, self.h))[1]
-        if np.linalg.norm(error, self.pow_distance) <= self.tolerance:
+        error = self.marginal_error()
+        if error <= self.tolerance:
             self.impl_phi_h = impl_phi_h
             self.impl_psi = impl_psi
             self.time_init -= time_compute
@@ -1842,8 +1843,8 @@ class Grid:
             self.times_comp.append(time_compute)
             if i % 1 == 0:
                 self.penalization = 0
-                error = self.value_grad_ext(self.package(self.phi, self.psi, self.h))[1]
-                if np.linalg.norm(error, self.pow_distance) <= self.tolerance:
+                error = self.marginal_error()
+                if error <= self.tolerance:
                     break
         self.impl_phi_h = impl_phi_h
         self.impl_psi = impl_psi
@@ -1856,13 +1857,10 @@ class Grid:
         pen = self.penalization
         self.time_init = timeit.default_timer()
         self.penalization = 0.
-        error = self.value_grad_ext(self.package(self.phi,
-                                                 self.psi, self.h))[1]#How to avoid this useless step???
-        error_size = np.linalg.norm(error, self.pow_distance)
         if self.grid_just_dobled:
-            self.tolerance = min(0.5, max(0.5*error_size, tol))
+            self.tolerance = max(0.5, tol)
         else:
-            self.tolerance = min(0.5, max(0.5*error_size, (1.-error_size)*error_size, tol))
+            self.tolerance = max(0.5, tol)
         self.time_init = -(timeit.default_timer()-self.time_init)
         self.Optimization_entropic_sinkhorn(iterations = self.max_sinkhorn_steps_hybrid)
         self.tolerance = tol
@@ -2075,7 +2073,7 @@ class Grid:
     
     
     def fail_h_lab(self, mart_errors,
-                   psi = None, precise_h = False):
+                   psi = None, precise_h = False, iter_fail = 1):
         errors = np.linalg.norm(mart_errors, 1, axis = 1)
         error_tol = self.epsilon
         error_list = np.where(errors > error_tol)
@@ -2089,13 +2087,13 @@ class Grid:
             restrict_compute[error_list] += 1
             DATA = self.h_from_phi_psi(calc_phi = True, psi = psi, precise_h = precise_h,
                                        safe_solving = True, restrict_compute = restrict_compute,
-                                       previous_error = errors)
+                                       previous_error = errors, iter_fail = iter_fail)
             phi = DATA['phi']
             self.phi = phi
             h = DATA['h']
             self.h = h#useless?
             h = self.fail_h_lab(DATA['mart_errors'], psi = psi,
-                                    precise_h = precise_h)
+                                    precise_h = precise_h, iter_fail = iter_fail+1)
         return (self.phi, self.h)
     
         
@@ -2107,6 +2105,7 @@ class Grid:
         h = unpack['h']
         if self.impl_psi:
             psi = self.psi_from_phi_h(phi = phi, h = h)
+            self.psi = psi
         elif self.impl_phi_h:
             self.psi = psi
             if self.martingale:
@@ -2181,6 +2180,18 @@ class Grid:
         return (value, gradient)
 
 
+    def marginal_error(self, print_grad = True):
+        impl_phi_h = self.impl_phi_h
+        impl_psi = self.impl_psi
+        self.impl_phi_h = 0
+        self.impl_psi = 0
+        error_vect = self.value_grad_ext(self.package(self.phi, self.psi,
+                                     self.h), print_grad = print_grad)[1]
+        error = np.linalg.norm(error_vect, self.pow_distance)
+        self.impl_phi_h = impl_phi_h
+        self.impl_psi = impl_psi
+        return error
+        
 
   
     
@@ -2582,9 +2593,8 @@ class Grid:
                     self.Optimization_entropic(iterations = intermediate_iter)
                     self.fignum += 1
                 self.penalization = 0.
-                error = self.value_grad_ext(self.package(self.phi, self.psi,
-                                            self.h), print_grad = False)[1]#Is this step useful???
-                print("error_real = ", np.linalg.norm(error,self.pow_distance))
+                error = self.marginal_error(print_grad = False)
+                print("error_real = ", error)
                 if self.epsilon<=1e-0:
                     test_accuracy = self.test_accuracy()
                     if self.scale and test_size():
@@ -2667,8 +2677,8 @@ class Grid:
         self.Optimization_entropic(iterations = intermediate_iter)
         self.fignum += 1
         self.penalization = 0.
-        error = self.value_grad_ext(self.package(self.phi, self.psi, self.h), print_grad = False)[1]
-        print("error_real = ", np.linalg.norm(error,self.pow_distance))
+        error = self.marginal_error(print_grad = False)
+        print("error_real = ", error)
         if entrop_error is not None:
             gf.check(self.test_accuracy() <= entrop_error)
                 

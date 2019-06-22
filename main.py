@@ -162,13 +162,13 @@ for method in methods:
     grid.init_psi()
     grid.init_h()
     grid.Optimization_entropic_decay(iterations = None, epsilon_start = 1e-0,
-                                     epsilon_final = 1e-6,
+                                     epsilon_final = 1e-4,
                                      intermediate_iter = 10000,#max number of entropic algo iterations
                                      final_size = 4000,#In case scale is on
                                      final_granularity = None,#1e-3,
                                      r_0 = 0.5, r_f = 0.5,
                                      entrop_error = None,#1e-4,
-                                     tol = 1e-4, pen = 1e-4,
+                                     tol = 1e-3, pen = 1e-3,
                                      pen_0 = 1e-2, pen_f = 1e-2,#to make it evolve during epsilon scaling
                                      tol_0 = 1e-2, tol_f = 1e-2#to make it evolve during epsilon scaling
                                      )
