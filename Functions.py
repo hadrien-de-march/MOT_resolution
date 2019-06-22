@@ -393,7 +393,12 @@ def auxiliary_h(i, arg):
                 elif hardcore_compute:
                     epsilon_sto = epsilon
                     epsilon_end = epsilon
-                    epsilon_start = min(1., previous_error)
+                    norm_psi = np.linalg.norm(psi, 'inf')
+                    size_Delta = norm_psi+1.
+                    epsilon_start = min(size_Delta/10., previous_error)
+                    if epsilon_start < previous_error:
+                        norm_x0 = np.linalg.norm(x0, 1)*dim
+                        x0 /= max(norm_x0/(10.*size_Delta), 1.)
                     if epsilon_end < epsilon_start:
                         nb_iter = int(2+np.rint(-np.log2(epsilon_end/epsilon_start)))
                         d_eps = (epsilon_end/epsilon_start)**(1./(nb_iter-1.))

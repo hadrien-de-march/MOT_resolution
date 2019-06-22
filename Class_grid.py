@@ -2083,7 +2083,8 @@ class Grid:
         if number_fail:
             print("Number of failed h = ", number_fail)
             print("errors for failed h = ", errors[error_list])
-            print("coordinates of the errors = ", self.gridX[error_list])
+            if self.dim <= 1:
+                print("coordinates of the errors = ", self.gridX[error_list])
             restrict_compute = np.zeros(self.lenX)
             restrict_compute[error_list] += 1
             DATA = self.h_from_phi_psi(calc_phi = True, psi = psi, precise_h = precise_h,
