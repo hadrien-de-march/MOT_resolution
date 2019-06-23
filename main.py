@@ -27,7 +27,7 @@ grid_MC = 1#You need to use MC if the dimension is higher than 32
 zero = 1e-10
 epsilon = 1e-1
 nb_threads = 2*cpu_count()
-tasks_per_thread = 200
+tasks_per_thread = 20
 size_memory_max = 1e7
 
 use_pool = 1
