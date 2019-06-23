@@ -18,19 +18,20 @@ import Distribution_Functions as dst
 
 print("number of CPUs = ", cpu_count())
 
-d = 50#You need to use MC if the dimension is higher than 32
+d = 3#You need to use MC if the dimension is higher than 32
 
 size_grids_init = {'x': 10, 'y': 10}
 boundX = 1.
 boundY = boundX*1.01
+grid_MC = 1#You need to use MC if the dimension is higher than 32
 zero = 1e-10
 epsilon = 1e-1
 nb_threads = 2*cpu_count()
 tasks_per_thread = 200
 size_memory_max = 1e7
 
-use_pool = 1
-smart_timing_pool = 0#pool activates when the problem becomes big
+use_pool = 0
+smart_timing_pool = 1#pool activates when the problem becomes big
 print_time_pool = False
 plot_perf = 1#Builds the list of time computations
 plot_save = 0#Save the figures and prevent the plotting
@@ -46,7 +47,7 @@ methods = ['hybrid']#'Newton-CG']#]#, , 'sinkhorn']#, 'L-BFGS-B']#['trust-ncg', 
 
 tolerance = 1e-7
 entropic = True
-compute_entropy_error = 0#Computes a precise version of the entropy error. Avoid if dimension is high
+compute_entropy_error = 1#Computes a precise version of the entropy error. Avoid if dimension is high
 newNewton = 1#Set gtol_for_newton False is this is set True
 gtol_for_newton = 1-newNewton#Set is False if newNewton = True
 additional_step_CG = 0
@@ -60,7 +61,6 @@ compute_phi_h = 1###Compute phi and h when computing the concave hull, and compu
 sparse = 0
 scale = 1
 lift_when_scaling = 1
-grid_MC = 1#You need to use MC if the dimension is higher than 32
 #implieds = [(True,False)]#(impl_phi_h, grid.impl_psi)
 nmax_Newton_h = 20
 tol_Newton_h = 1e-7
@@ -165,14 +165,14 @@ for method in methods:
     grid.init_h()
     grid.Optimization_entropic_decay(iterations = None, epsilon_start = 1e-0,
                                      epsilon_final = 1e-4,
-                                     intermediate_iter = 10000,#max number of entropic algo iterations
-                                     final_size = 10000,#In case scale is on
+                                     intermediate_iter = 1000,#max number of entropic algo iterations
+                                     final_size = 1000,#In case scale is on
                                      final_granularity = None,#1e-3,#In case scale is on
                                      r_0 = 0.5, r_f = 0.5,
                                      entropy_tol = None,#1e-4,
                                      pen = 1e-2, tol = 1e-3,
-                                     pen_0 = 1e-1, pen_f = 1e-2,#to make it evolve during epsilon scaling
-                                     tol_0 = 1e-2, tol_f = 1e-3#to make it evolve during epsilon scaling
+                                     pen_0 = 1e-1, pen_f = 1e-1,#to make it evolve during epsilon scaling
+                                     tol_0 = 1e-2, tol_f = 1e-2#to make it evolve during epsilon scaling
                                      )
 #    grid.plot_entropic_proba()
 #    grid.tag+='more'

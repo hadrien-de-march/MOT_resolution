@@ -988,8 +988,7 @@ class Grid:
         
     def set_convex_order(self, penalization_type = "uniform", tol_min = zero, tol_h = 1e-10,
                          nmax_Newton = 20):
-        print("\n")
-        print("Finding the closest nu in convex order...")
+        print("\n", "Finding the closest nu in convex order...")
         if self.nu_original is None:
             self.nu_original = np.array(self.nu)
         max_gridX = np.resize(np.amax(self.gridX, axis = 0), (1, self.dim))
@@ -1031,8 +1030,7 @@ class Grid:
         gfc.Optimization_entropic()
         marginal_Y = gfc.marginal(project_on = 'y')['marginal']
         self.nu = marginal_Y
-        print("Computed!")
-        print("\n")
+        print("Computed!", "\n")
         
         
         
