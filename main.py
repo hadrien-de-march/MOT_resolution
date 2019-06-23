@@ -30,8 +30,8 @@ nb_threads = 2*cpu_count()
 tasks_per_thread = 200
 size_memory_max = 1e7
 
-use_pool = 0
-smart_timing_pool = 1#pool activates when the problem becomes big
+use_pool = 1
+smart_timing_pool = 0#pool activates when the problem becomes big
 print_time_pool = False
 plot_perf = 1#Builds the list of time computations
 plot_save = 0#Save the figures and prevent the plotting
