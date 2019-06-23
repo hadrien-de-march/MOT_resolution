@@ -18,7 +18,7 @@ import Distribution_Functions as dst
 
 print("number of CPUs = ", cpu_count())
 
-d = 3#You need to use MC if the dimension is higher than 32
+d = 50#You need to use MC if the dimension is higher than 32
 
 size_grids_init = {'x': 10, 'y': 10}
 boundX = 1.
@@ -47,7 +47,7 @@ methods = ['hybrid']#'Newton-CG']#]#, , 'sinkhorn']#, 'L-BFGS-B']#['trust-ncg', 
 
 tolerance = 1e-7
 entropic = True
-compute_entropy_error = 1#Computes a precise version of the entropy error. Avoid if dimension is high
+compute_entropy_error = 0#Computes a precise version of the entropy error. Avoid if dimension is high
 newNewton = 1#Set gtol_for_newton False is this is set True
 gtol_for_newton = 1-newNewton#Set is False if newNewton = True
 additional_step_CG = 0
@@ -60,7 +60,7 @@ include_phi = 1###Do not consider that the martingale constraint is satisfied wh
 compute_phi_h = 1###Compute phi and h when computing the concave hull, and computes a precise duality bound
 sparse = 0
 scale = 1
-lift_when_scaling = 1
+lift_when_scaling = 0
 #implieds = [(True,False)]#(impl_phi_h, grid.impl_psi)
 nmax_Newton_h = 20
 tol_Newton_h = 1e-7
@@ -166,7 +166,7 @@ for method in methods:
     grid.Optimization_entropic_decay(iterations = None, epsilon_start = 1e-0,
                                      epsilon_final = 1e-4,
                                      intermediate_iter = 1000,#max number of entropic algo iterations
-                                     final_size = 1000,#In case scale is on
+                                     final_size = 10000,#In case scale is on
                                      final_granularity = None,#1e-3,#In case scale is on
                                      r_0 = 0.5, r_f = 0.5,
                                      entropy_tol = None,#1e-4,
