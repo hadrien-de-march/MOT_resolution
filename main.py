@@ -25,7 +25,7 @@ boundX = 1.
 boundY = boundX*1.01
 zero = 1e-10
 epsilon = 1e-1
-nb_threads = 4*cpu_count()
+nb_threads = 2*cpu_count()
 tasks_per_thread = 200
 size_memory_max = 1e7
 
@@ -46,7 +46,7 @@ methods = ['hybrid']#'Newton-CG']#]#, , 'sinkhorn']#, 'L-BFGS-B']#['trust-ncg', 
 
 tolerance = 1e-7
 entropic = True
-compute_entropy_error = 1
+compute_entropy_error = 0#Computes a precise version of the entropy error. Avoid if dimension is high
 newNewton = 1#Set gtol_for_newton False is this is set True
 gtol_for_newton = 1-newNewton#Set is False if newNewton = True
 additional_step_CG = 0

@@ -2679,7 +2679,7 @@ class Grid:
                             step = stepY
                         else:
                             step = np.sqrt(stepX*stepY)
-                        while self.epsilon < step and test_size():
+                        while self.epsilon < step*10 and test_size():
                             self.doble_grid(axis = 'xy', sparse = False, lift = self.lift_when_scaling)
                             if self.grid_MC:
                                 stepX = 1./self.MC_iter['x']
