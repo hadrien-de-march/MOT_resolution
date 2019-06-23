@@ -52,6 +52,7 @@ class Grid:
     smart_timing_pool = False
     sparse = False
     scale = False
+    lift_when_scaling = False
     values_opt =[]
     eval_nb = 0
     times_compute_phi_psi = 0
@@ -183,15 +184,13 @@ class Grid:
     def init_h(self):
         self.h = np.reshape(np.zeros(self.lenX*self.dim), (self.lenX, self.dim))
                 
-    def purify_grid(self):
+    def purify_grid(self, proba_min = None):
+        if proba_min is None:
+            proba_min = self.proba_min
         deleteX = []
         deleteY = []
-        for i in range(self.lenX):
-            if self.mu[i]<self.proba_min/self.lenX:
-                deleteX.append(i)
-        for j in range(self.lenY):
-            if self.nu[j]<self.proba_min/self.lenY:
-                deleteY.append(j)
+        deleteX = np.where(self.mu<proba_min/self.lenX)
+        deleteY = np.where(self.nu<proba_min/self.lenY)
         self.gridX = np.delete(self.gridX, deleteX, axis = 0)
         self.lenX = len(self.gridX)
         self.gridY = np.delete(self.gridY, deleteY, axis = 0)
@@ -258,7 +257,7 @@ class Grid:
         
 ### Initialization
     
-    def __init__(self, dim = 0, stepsX = 0, boundX = 0, stepsY = 0, boundY = 0, epsilon = 0,
+    def __init__(self, dim = 0, size_grids_init = None, boundX = 0, boundY = 0, epsilon = 0,
                  cost = None, d_mu = None, d_nu = None, nmax_Newton_h = 200, tol_Newton_h = 1e-10,
                  d_nu_d_mu = None, zero = 1e-10, grid_MC_creator = None,
                  compute_entropy_error = False, max_sinkhorn_steps_hybrid = 100,
@@ -272,11 +271,12 @@ class Grid:
                  pow_distance = 2., plot_data_save = False, gtol_for_newton = False,
                  newNewton = True, precond_CG = False, additional_step_CG = False, maxiter_CG = 100,
                  sparse = False, size_memory_max = 1e8, include_phi = True,
-                 scale = False, penalization_type = "uniform", penalization_power = 2.):
+                 scale = False, lift_when_scaling = False,
+                 penalization_type = "uniform", penalization_power = 2.):
         self.dim = dim
-        self.stepsX = stepsX
+        self.stepsX = size_grids_init['x']
         self.boundX = boundX
-        self.stepsY = stepsY
+        self.stepsY = size_grids_init['y']
         self.boundY = boundY
         self.method = method
         self.nmax_Newton_h = nmax_Newton_h
@@ -295,6 +295,7 @@ class Grid:
         self.include_phi = include_phi
         self.sparse = sparse
         self.scale = scale
+        self.lift_when_scaling = lift_when_scaling
         self.impl_phi_h = impl_phi_h
         if self.impl_phi_h and self.impl_psi:
             print("phi, psi, and h cannot be implied at the same time.")
@@ -630,6 +631,8 @@ class Grid:
         if 'y' in axis:
             axis_do.append('y')
         dim = self.dim
+        if self.grid_MC and self.martingale:
+            self.revert_nu_to_original()
         for axis in axis_do:
             if axis == 'x':
                 grid = self.gridX
@@ -646,14 +649,17 @@ class Grid:
                 raise("You should not be here")
             if self.grid_MC:
                 grid_2 = self.grid_MC_creator(axis, MC_iter = self.MC_iter)
+                values_grid = self.duplicate_values_grid(grid, grid_2, axis = axis,
+                                           old_values_phi = self.phi, old_values_psi = self.psi,
+                                           old_values_h = self.h)
                 grid = np.concatenate((grid, grid_2))
                 self.MC_iter[axis] *= 2
                 if axis == 'x':
-                    self.phi = np.concatenate((self.phi, self.phi*0+1./self.zero))
+                    self.phi = np.concatenate((self.phi, values_grid['values_phi']))
                     if self.martingale:
-                            self.h= np.concatenate((self.h, self.h*0))
+                        self.h= np.concatenate((self.h, values_grid['values_h']))
                 elif axis == 'y':
-                    self.psi = np.concatenate((self.psi, self.psi*0+1./self.zero))
+                    self.psi = np.concatenate((self.psi, values_grid['values_psi']))
                 else:
                     raise("You should not be here")
             else:
@@ -693,7 +699,7 @@ class Grid:
         if self.purify_proba:
             self.purify_grid()
         if self.martingale:
-            self.set_convex_order(tol = 1e-5)
+            self.set_convex_order(tol_min = 1e-5)
         if lift:
             if not self.impl_phi_h:
                 self.psi_from_phi_h()
@@ -712,6 +718,50 @@ class Grid:
 
         
 
+    def duplicate_values_grid(self, old_grid, new_grid, axis = None,
+                                           old_values_phi = None, old_values_psi = None,
+                                           old_values_h = None):
+        code_name = "duplicate_values_axis_"+axis
+        auxiliary = fn.auxiliary_duplicate_values_grid
+        base_arg = self.base_arg(mu = False, nu = False, phi = False,
+                                 psi = False, h = False, gridX = False, gridY = False,
+                 sparse_gridXY = False, sparse_gridYX = False)
+     
+        var = {}
+        
+        base_arg['old_grid'] = old_grid
+        base_arg['new_grid'] = new_grid
+        if axis == 'x':
+            var['values_phi'] = np.zeros_like(old_values_phi)
+            value_names = ['values_phi']
+            base_arg['old_values_phi'] = old_values_phi
+            if self.martingale:
+                var['values_h'] = np.zeros_like(old_values_h)
+                value_names.append('values_h')
+                base_arg['old_values_h'] = old_values_h
+        elif axis == 'y':
+            var['values_psi'] = np.zeros_like(old_values_psi)
+            value_names = ['values_psi']
+            base_arg['old_values_psi'] = old_values_psi
+        else:
+            print("The axis ", axis, " does not exist")
+            raise("Wrong axis")
+        base_arg['value_names'] = value_names
+                
+        def apply_elem(elem, var):
+            for value_name in value_names:
+                var[value_name][elem['n']] = elem['new_'+value_name]
+            return var
+
+        #DO NOT TOUCH THIS PART
+        var = fn.action_pool(auxiliary = auxiliary, apply_elem = apply_elem,
+        axis = axis, base_arg = base_arg, var = var, code_name = code_name)
+        #END OF NOT TOUCHING
+        
+        result = {}
+        for value_name in value_names:
+            result[value_name] = var[value_name]
+        return result
 
 
 
@@ -917,7 +967,23 @@ class Grid:
         if flag_error:
             raise("Not in convex order.")
         print("checking done")
-        
+
+
+    def revert_nu_to_original(self):
+        if self.nu_original is None:
+            print("You are already in original state")
+        else:
+            self.nu = self.nu_original
+            indices = np.where(self.nu >= 0)
+            self.gridY = self.gridY[indices]
+            self.psi = self.psi[indices]
+            self.lenY = len(self.gridY)
+            if self.impl_psi:
+                self.size_x = self.lenX*(self.dim+1)
+            elif self.impl_phi_h:
+                self.size_x = self.lenY
+            else:
+                self.size_x = self.lenX*(self.dim+1)+self.lenY            
         
         
     def set_convex_order(self, penalization_type = "uniform", tol_min = zero, tol_h = 1e-10,
@@ -925,7 +991,7 @@ class Grid:
         print("\n")
         print("Finding the closest nu in convex order...")
         if self.nu_original is None:
-            self.nu_original = self.nu
+            self.nu_original = np.array(self.nu)
         max_gridX = np.resize(np.amax(self.gridX, axis = 0), (1, self.dim))
         min_gridX = np.resize(np.amin(self.gridX, axis = 0), (1, self.dim))
         additional_points = np.zeros(self.dim*(self.dim+1))
@@ -2494,7 +2560,7 @@ class Grid:
 
 
 
-    def test_accuracy(self):
+    def test_entropy_accuracy(self):
         data = self.expectation_cost(dual = True)
         primal = data['expectation_cost']
         dual = data['dual']-data['gap_phi']
@@ -2533,7 +2599,7 @@ class Grid:
         
     def Optimization_entropic_decay(self, iterations = None, epsilon_start = 1., final_size = 0.,
                                     final_granularity = None,
-                                    r_0 = 0.5, r_f = None, entrop_error = 1e-4, tol = 1e-7,
+                                    r_0 = 0.5, r_f = None, entropy_tol = 1e-4, tol = 1e-7,
                                     epsilon_final = 1e-5, intermediate_iter = 40, pen = 1e-2,
                                     tol_0 = 1e-1, tol_f = None,
                                     pen_0 = None, pen_f = None):
@@ -2594,9 +2660,9 @@ class Grid:
                     self.fignum += 1
                 self.penalization = 0.
                 error = self.marginal_error(print_grad = False)
-                print("error_real = ", error)
+                print("marginal error = ", error)
                 if self.epsilon<=1e-0:
-                    test_accuracy = self.test_accuracy()
+                    test_entropy_accuracy = self.test_entropy_accuracy()
                     if self.scale and test_size():
                         self.sparse_gridXY = None
                         self.sparse_gridYX = None
@@ -2614,7 +2680,7 @@ class Grid:
                         else:
                             step = np.sqrt(stepX*stepY)
                         while self.epsilon < step and test_size():
-                            self.doble_grid(axis = 'xy', sparse = False, lift = True)
+                            self.doble_grid(axis = 'xy', sparse = False, lift = self.lift_when_scaling)
                             if self.grid_MC:
                                 stepX = 1./self.MC_iter['x']
                                 stepY = 1./self.MC_iter['y']
@@ -2659,12 +2725,12 @@ class Grid:
                             else:
                                 print("sparse on")
                         
-                if entrop_error is not None and (test_accuracy <= entrop_error):
+                if entropy_tol is not None and (test_entropy_accuracy <= entropy_tol):
                     break
         print('\n')
         print("Adjustement iteration")
         while self.scale and test_size():
-            self.doble_grid(axis = 'xy', sparse = False, lift = True) 
+            self.doble_grid(axis = 'xy', sparse = False, lift = self.lift_when_scaling) 
         self.penalization = pen_f
         self.tolerance = tol
         self.Optimization_entropic(iterations = intermediate_iter)
@@ -2677,10 +2743,11 @@ class Grid:
         self.Optimization_entropic(iterations = intermediate_iter)
         self.fignum += 1
         self.penalization = 0.
-        error = self.marginal_error(print_grad = False)
-        print("error_real = ", error)
-        if entrop_error is not None:
-            gf.check(self.test_accuracy() <= entrop_error)
+        marginal_error = self.marginal_error(print_grad = False)
+        print("marginal error = ", marginal_error)
+        entropy_error = self.test_entropy_accuracy()
+        if entropy_tol is not None:
+            gf.check(entropy_error <= entropy_tol)
                 
                 
 

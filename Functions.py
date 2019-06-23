@@ -398,7 +398,7 @@ def auxiliary_h(i, arg):
                     size_Delta = norm_psi+1.
                     epsilon_start = min(size_Delta/10., previous_error)*2**iter_fail
                     if epsilon_start < previous_error*2**iter_fail:
-                        norm_x0 = np.linalg.norm(x0, 1)*dim
+                        norm_x0 = np.linalg.norm(x0, 1)
                         x0 /= max(norm_x0/(10.*size_Delta), 1.)
                     if epsilon_end < epsilon_start:
                         nb_iter = int(2+np.rint(-np.log2(epsilon_end/epsilon_start)))
@@ -651,6 +651,25 @@ def auxiliary_cost_minimax(i, arg):
                 time_comp = timeit.default_timer()-t_0
                 return {'i' : i , 'time_comp' : time_comp, 'min_cost' : min_cost,
                         'max_cost': max_cost}
+                
+                
+def auxiliary_duplicate_values_grid(n, arg):
+                value_names = arg['value_names']
+                old_grid = arg['old_grid']
+                point = arg['new_grid'][n]
+                dim = arg['dim']
+                
+                result = {'n' : n}
+                t_0 = timeit.default_timer()
+                point = np.resize(point, (1, dim))
+                distances = np.linalg.norm(old_grid-point, axis = 1)
+                min_index = np.argmin(distances)
+                for value_name in value_names:
+                    result['new_'+value_name] = arg['old_'+value_name][min_index]
+                time_comp = timeit.default_timer()-t_0
+                
+                result['time_comp'] = time_comp
+                return result
 
             
 def auxiliary_vg_phi(i, arg):
