@@ -23,11 +23,10 @@ d = 50#You need to use MC if the dimension is higher than 32
 size_grids_init = {'x': 10, 'y': 10}
 boundX = 1.
 boundY = boundX*1.01
-grid_MC = 1#You need to use MC if the dimension is higher than 32
 zero = 1e-10
 epsilon = 1e-1
 nb_threads = 2*cpu_count()
-tasks_per_thread = 20
+tasks_per_thread = 10
 size_memory_max = 1e7
 
 use_pool = 1
@@ -39,7 +38,7 @@ plot_data_save = 1#Saves the data that serves to plot the figures
 tag = 'Mac'
 
 martingale = 1
-
+grid_MC = 1#You need to use MC if the dimension is higher than 32
 
 #methods = ['Newton-CG']#'L-BFGS-B'#'Newton-CG'#'trust-ncg'#BFGS
 methods = ['hybrid']#'Newton-CG']#]#, , 'sinkhorn']#, 'L-BFGS-B']#['trust-ncg', 'sinkhorn']#]#, 'trust-ncg', 'BFGS']
