@@ -26,7 +26,7 @@ boundY = boundX*1.01
 zero = 1e-10
 epsilon = 1e-1
 nb_threads = 2*cpu_count()
-tasks_per_thread = 10
+tasks_per_thread = 20
 size_memory_max = 1e7
 
 use_pool = 1

@@ -2685,7 +2685,7 @@ class Grid:
                             expected_marginal_error = step
                         else:
                             expected_marginal_error = step**(1./self.dim)
-                        while self.epsilon < expected_marginal_error and test_size():
+                        while test_entropy_accuracy < expected_marginal_error and test_size():
                             self.doble_grid(axis = 'xy', sparse = False, lift = self.lift_when_scaling)
                             if self.grid_MC:
                                 stepX = 1./self.MC_iter['x']
