@@ -2699,6 +2699,12 @@ class Grid:
                                 step = stepY
                             else:
                                 step = np.sqrt(stepX*stepY)
+                            if self.grid_MC:
+                                expected_marginal_error = np.sqrt(step)
+                            elif self.dim == 1:
+                                expected_marginal_error = step
+                            else:
+                                expected_marginal_error = step**(1./self.dim)
                         print("granularity = ", step)
                 
                     if self.smart_timing_pool and self.lenX+self.lenY >= 2000:
