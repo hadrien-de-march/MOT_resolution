@@ -127,7 +127,7 @@ class Grid:
     
 ### GENERIC CREATOR FUNCTIONS
 
-    def make_grid(self, axis, dim = None, basic_inclusion = [], line = []):
+    def make_grid(self, axis, dim = None):
         if self.grid_MC:
             print("MC grid created for "+axis)
             return self.grid_MC_creator(axis, MC_iter = self.MC_iter)
